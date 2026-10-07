@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#c6e0ee">
 <title>Stateio India</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,121 +14,106 @@
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 
 :root {
-  --bg:#d2d2d2;
+  --sea:#c6e0ee;
+  --land:#ece8de;
   --ink:#2b2f33;
   --blue:#2e9bf0;  --blue-d:#1b6fb8;
-  --red:#e8352b;
-  --green:#4fd858;
-  --gray:#9a9a9a;
+  --red:#e8352b;   --red-d:#a31d16;
+  --green:#17803f; --green-d:#01411c;
+  --gray:#9ea4aa;
+  --gold:#ffb800;  --gold-d:#c98600;
 }
 
+html, body { height:100%; }
 body {
-  background:var(--bg);
+  background:var(--sea);
   font-family:'Fredoka','Baloo 2','Nunito',ui-rounded,'SF Pro Rounded','Arial Rounded MT Bold',system-ui,sans-serif;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  height:100vh;
   overflow:hidden;
   color:var(--ink);
+  -webkit-user-select:none;
+  user-select:none;
 }
 
-#top-ui {
-  width:100%;
-  padding:14px 16px 6px;
-  flex-shrink:0;
-  display:flex;
-  justify-content:center;
-}
-/* Thick white-rimmed pill showing each side's share of all troops */
-#progress-bar {
-  width:min(560px,86%);
-  height:26px;
-  background:#fff;
-  border:3px solid #fff;
-  border-radius:999px;
-  overflow:hidden;
-  display:flex;
-  gap:3px;
-  box-shadow:0 2px 0 rgba(0,0,0,0.12);
-}
-.pb-seg {
-  height:100%;
-  transition:width .4s cubic-bezier(.4,0,.2,1);
-  min-width:0;
-}
-
+/* The map fills the whole screen; the bars float on top of it */
 #map-wrapper {
-  position:relative;
-  flex:1;
-  width:100%;
-  display:flex;
-  align-items:center;
-  justify-content:center;
+  position:fixed;
+  inset:0;
   overflow:hidden;
+  background:var(--sea);
 }
 #game-svg {
-  max-width:100%;
-  max-height:100%;
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
   display:block;
   touch-action:none;
-  user-select:none;
-  -webkit-user-select:none;
   -webkit-tap-highlight-color:transparent;
+  --vs:1;
 }
+#fx {
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  pointer-events:none;
+}
+
+/* Neighbouring land, drawn faintly so the map has somewhere to sit */
+.land { fill:var(--land); stroke:none; pointer-events:none; }
 
 /* Flat states with thin pale borders; the fill colour is set from JS and
    deepens with the troop count */
 .state {
   cursor:pointer;
-  stroke:#e4e4e4;
-  stroke-width:0.9;
+  stroke:#f1f1f1;
+  stroke-width:calc(0.9px * var(--vs));
   stroke-linejoin:round;
   transition:fill .25s, filter .12s;
 }
 .state:hover { filter:brightness(1.05); }
 .state.sel, .state.drag-on {
   stroke:#fff;
-  stroke-width:2.6;
+  stroke-width:calc(2.6px * var(--vs));
   filter:brightness(1.06);
 }
 .state.drag-tgt {
   stroke:#fff;
-  stroke-width:2.2;
+  stroke-width:calc(2.2px * var(--vs));
 }
-/* Regions drawn for completeness but not part of the game (small UTs, islands) */
-.inert {
-  fill:#bcbcbc;
-  stroke:#d6d6d6;
-  stroke-width:0.6;
+/* Parts of India that are not in play on this level (and the small UTs / islands) */
+.inert, .out {
+  fill:#d9d3c5;
+  stroke:#ebe7dd;
+  stroke-width:calc(0.7px * var(--vs));
+  stroke-linejoin:round;
   pointer-events:none;
+  transition:fill .4s;
 }
 
 .abbr {
-  font-size:5.5px;
+  font-size:calc(5.5px * var(--vs));
   font-weight:600;
-  fill:rgba(0,0,0,0.38);
+  fill:rgba(0,0,0,0.42);
   text-anchor:middle;
   dominant-baseline:central;
   pointer-events:none;
   letter-spacing:.3px;
 }
 .tnum {
-  font-size:9px;
+  font-size:calc(9.5px * var(--vs));
   font-weight:700;
   fill:#1f2326;
+  stroke:rgba(255,255,255,0.85);
+  stroke-width:calc(2.2px * var(--vs));
+  stroke-linejoin:round;
+  paint-order:stroke;
   text-anchor:middle;
   dominant-baseline:central;
   pointer-events:none;
 }
 /* Owner emblem inside the centre circle */
-.icn {
-  font-size:8.5px;
-  fill:#fff;
-  text-anchor:middle;
-  dominant-baseline:central;
-  pointer-events:none;
-}
+.emb { pointer-events:none; stroke-linecap:round; }
 
 /* Centre circle of each state — troops leave from it and arrive at it */
 .node {
@@ -139,76 +125,160 @@ body {
 /* Soft halo: blue around the state being dragged from, red around the target */
 .node.sel, .node.src {
   stroke:rgba(60,110,230,0.4);
-  stroke-width:7;
+  stroke-width:calc(7px * var(--vs));
 }
 .node.tgt {
   stroke:rgba(235,70,60,0.45);
-  stroke-width:7;
+  stroke-width:calc(7px * var(--vs));
 }
 
 /* Aiming arrow, dragged from one state's circle to another's */
-#arrow { pointer-events:none; }
-#arrow-line {
+#arrow, #tut { pointer-events:none; }
+#arrow-line, #tut-line {
   stroke:rgba(74,108,224,0.72);
-  stroke-width:6;
+  stroke-width:calc(6px * var(--vs));
   stroke-linecap:round;
 }
-#arrow-head { fill:rgba(74,108,224,0.9); }
+#arrow-head, #tut-head { fill:rgba(74,108,224,0.9); }
+#tut-dot  { fill:#fff; stroke:rgba(30,40,60,0.55); stroke-width:calc(1.4px * var(--vs)); }
+#tut-ring { fill:none; stroke:#fff; stroke-width:calc(1.6px * var(--vs)); }
 
-#fx {
-  position:absolute;
+/* ── Top bar ───────────────────────────────────────── */
+#top-ui {
+  position:fixed;
+  top:0; left:0; right:0;
+  padding:calc(10px + env(safe-area-inset-top)) 12px 0;
+  display:none;
+  align-items:flex-start;
+  justify-content:center;
+  gap:10px;
+  z-index:20;
   pointer-events:none;
 }
+body.ingame #top-ui { display:flex; }
+#top-mid {
+  flex:1;
+  max-width:560px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:6px;
+}
+#lvl-name {
+  font-size:14px;
+  font-weight:700;
+  letter-spacing:.6px;
+  color:#fff;
+  background:rgba(43,47,51,0.62);
+  padding:3px 14px 4px;
+  border-radius:999px;
+  white-space:nowrap;
+}
+/* Thick white-rimmed pill showing each side's share of all troops */
+#progress-bar {
+  width:100%;
+  height:26px;
+  background:#fff;
+  border:3px solid #fff;
+  border-radius:999px;
+  overflow:hidden;
+  display:flex;
+  gap:3px;
+  box-shadow:0 3px 0 rgba(0,0,0,0.14);
+}
+.pb-seg {
+  height:100%;
+  transition:width .4s cubic-bezier(.4,0,.2,1);
+  min-width:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+.pb-seg svg { flex-shrink:0; }
+.ibtn {
+  pointer-events:auto;
+  width:44px; height:44px;
+  flex-shrink:0;
+  border:none;
+  border-radius:14px;
+  background:#fff;
+  color:#4a5158;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow:0 4px 0 rgba(0,0,0,0.16);
+  transition:transform .08s, box-shadow .08s;
+}
+.ibtn:active { transform:translateY(3px); box-shadow:0 1px 0 rgba(0,0,0,0.16); }
+.ibtn svg { width:22px; height:22px; fill:currentColor; }
+.ibtn.off { color:#b9bfc5; }
 
+/* ── Overlays ──────────────────────────────────────── */
 .overlay {
   position:fixed;
   inset:0;
-  background:rgba(210,210,210,0.88);
+  background:rgba(198,224,238,0.55);
   display:flex;
   align-items:center;
   justify-content:center;
   z-index:300;
-  backdrop-filter:blur(6px);
+  padding:16px;
+  backdrop-filter:blur(3px);
+  -webkit-backdrop-filter:blur(3px);
 }
+.overlay.solid { background:rgba(198,224,238,0.9); }
 .card {
   background:#fff;
   border-radius:28px;
-  padding:34px 38px 30px;
+  padding:30px 34px 28px;
   max-width:400px;
-  width:90%;
+  width:100%;
+  max-height:100%;
+  overflow:auto;
   text-align:center;
   box-shadow:0 10px 0 rgba(0,0,0,0.13);
+  animation:pop-in .28s cubic-bezier(.2,1.4,.4,1);
 }
+.card.wide { max-width:680px; padding:24px 22px 22px; }
+@keyframes pop-in { from { transform:scale(.86); opacity:0; } to { transform:none; opacity:1; } }
 .card h1 {
-  font-size:clamp(2.4rem,9vw,3.4rem);
+  font-size:clamp(2.3rem,9vw,3.3rem);
   font-weight:700;
   letter-spacing:1px;
   line-height:1.05;
-  margin-bottom:4px;
+  margin-bottom:6px;
   color:var(--blue);
   text-shadow:0 4px 0 var(--blue-d);
 }
-.sub {
+.card h2 {
+  font-size:26px;
+  font-weight:700;
+  color:var(--ink);
+  margin-bottom:14px;
+}
+.tag {
   font-size:12px;
-  font-weight:600;
-  letter-spacing:4px;
+  font-weight:700;
+  letter-spacing:3px;
   color:#a3a8ad;
-  margin-bottom:18px;
+  margin-bottom:16px;
   text-transform:uppercase;
 }
 .desc {
   font-size:15px;
   font-weight:500;
-  line-height:1.6;
+  line-height:1.55;
   color:#5a6066;
-  margin-bottom:20px;
+  margin-bottom:18px;
 }
 .legend {
   display:flex;
   justify-content:center;
-  gap:14px;
+  gap:8px 14px;
   flex-wrap:wrap;
-  margin-bottom:26px;
+  margin-bottom:22px;
 }
 .li {
   display:flex;
@@ -218,22 +288,18 @@ body {
   font-weight:600;
   color:#5a6066;
 }
-.ldot {
-  width:14px; height:14px;
-  border-radius:50%;
-  flex-shrink:0;
-}
+.ldot { width:18px; height:18px; border-radius:50%; flex-shrink:0; background:var(--gray); }
 /* Chunky button that visibly presses down */
 .btn {
   background:var(--blue);
   color:#fff;
   border:none;
   border-radius:18px;
-  padding:14px 52px;
+  padding:14px 44px;
   font-family:inherit;
   font-size:20px;
   font-weight:700;
-  letter-spacing:1.5px;
+  letter-spacing:1.2px;
   cursor:pointer;
   box-shadow:0 6px 0 var(--blue-d);
   transition:transform .08s, box-shadow .08s, filter .12s;
@@ -241,15 +307,104 @@ body {
 }
 .btn:hover  { filter:brightness(1.07); }
 .btn:active { transform:translateY(4px); box-shadow:0 2px 0 var(--blue-d); }
-.bigicon { font-size:64px; display:block; margin-bottom:6px; }
-.card h1.win  { color:#ffb800; text-shadow:0 4px 0 #c98600; }
-.card h1.lose { color:var(--red); text-shadow:0 4px 0 #a31d16; }
-#res-msg { color:#5a6066; font-size:15px; font-weight:500; margin:10px 0 24px; line-height:1.5; }
+.btn.sm {
+  font-size:15px;
+  padding:10px 22px;
+  border-radius:14px;
+  box-shadow:0 4px 0 var(--blue-d);
+}
+.btn.ghost { background:#eef1f4; color:#5a6066; box-shadow:0 6px 0 #cfd5db; }
+.btn.sm.ghost { box-shadow:0 4px 0 #cfd5db; }
+.btn.ghost:active, .btn.sm.ghost:active { box-shadow:0 2px 0 #cfd5db; }
+.btn.block { display:block; width:100%; margin-bottom:14px; }
+.row { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:16px; }
 .tip { margin-top:16px; font-size:12px; font-weight:500; color:#b0b5ba; }
 
+/* ── Result card ───────────────────────────────────── */
+.ribbon {
+  display:inline-block;
+  font-size:clamp(1.5rem,6.4vw,2rem);
+  font-weight:700;
+  color:#fff;
+  padding:8px 26px 10px;
+  border-radius:16px;
+  margin-bottom:14px;
+  background:var(--gold);
+  box-shadow:0 5px 0 var(--gold-d);
+  transform:rotate(-2deg);
+}
+.ribbon.lose { background:var(--red); box-shadow:0 5px 0 var(--red-d); }
+.stars { display:flex; justify-content:center; gap:6px; margin-bottom:8px; }
+.stars svg { width:54px; height:54px; fill:#e3e6e9; }
+.stars svg:nth-child(2) { width:66px; height:66px; margin-top:-8px; }
+.stars svg.on { fill:var(--gold); animation:star-in .45s cubic-bezier(.2,1.6,.4,1) backwards; }
+.stars svg.on:nth-child(2) { animation-delay:.18s; }
+.stars svg.on:nth-child(3) { animation-delay:.36s; }
+@keyframes star-in { from { transform:scale(0) rotate(-40deg); } to { transform:none; } }
+#res-msg { color:#5a6066; font-size:15px; font-weight:500; margin:6px 0 16px; line-height:1.5; }
+.stats { display:flex; justify-content:center; gap:10px; margin-bottom:20px; }
+.stats div {
+  flex:1;
+  background:#f3f5f7;
+  border-radius:14px;
+  padding:9px 4px 8px;
+}
+.stats b { display:block; font-size:21px; font-weight:700; color:var(--ink); }
+.stats span { font-size:11px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:#9aa0a6; }
+
+/* ── Level select ──────────────────────────────────── */
+#lv-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(132px,1fr));
+  gap:12px;
+  margin-bottom:6px;
+}
+.lv {
+  position:relative;
+  border:none;
+  font-family:inherit;
+  background:#f3f5f7;
+  border-radius:18px;
+  padding:8px 8px 10px;
+  cursor:pointer;
+  box-shadow:0 5px 0 #d5dae0;
+  transition:transform .08s, box-shadow .08s;
+  color:var(--ink);
+}
+.lv:active { transform:translateY(3px); box-shadow:0 2px 0 #d5dae0; }
+.lv svg.mini { width:100%; height:auto; display:block; background:var(--sea); border-radius:12px; }
+.lv .num {
+  position:absolute;
+  top:13px; left:13px;
+  width:24px; height:24px;
+  border-radius:50%;
+  background:var(--ink);
+  color:#fff;
+  font-size:13px;
+  font-weight:700;
+  line-height:24px;
+}
+.lv .nm { font-size:14px; font-weight:700; margin-top:7px; line-height:1.15; }
+.lv .st { display:flex; justify-content:center; gap:2px; margin-top:4px; }
+.lv .st svg { width:16px; height:16px; fill:#d5dae0; }
+.lv .st svg.on { fill:var(--gold); }
+.lv.locked { cursor:default; }
+.lv.locked svg.mini { filter:grayscale(1); opacity:.45; }
+.lv.locked .nm { color:#a9afb5; }
+.lv.locked .num { background:#b3b9bf; }
+.lv .lock {
+  position:absolute;
+  left:0; right:0; top:34%;
+  display:none;
+  justify-content:center;
+}
+.lv.locked .lock { display:flex; }
+.lv .lock svg { width:30px; height:30px; fill:#7d848b; }
+
+/* ── In-game toasts ────────────────────────────────── */
 #hint {
   position:fixed;
-  bottom:12px;
+  bottom:calc(12px + env(safe-area-inset-bottom));
   left:50%;
   transform:translateX(-50%);
   background:#fff;
@@ -263,7 +418,60 @@ body {
   z-index:10;
   transition:opacity .3s;
   white-space:nowrap;
+  opacity:0;
 }
+body.danger #hint { background:var(--red); color:#fff; }
+
+/* Level title that flies in while the camera zooms */
+#banner {
+  position:fixed;
+  left:0; right:0; top:34%;
+  text-align:center;
+  pointer-events:none;
+  z-index:30;
+  opacity:0;
+}
+#banner.show { animation:banner 2.1s ease-out forwards; }
+#banner .b1 {
+  display:inline-block;
+  font-size:14px; font-weight:700; letter-spacing:4px;
+  color:#fff; background:var(--ink);
+  padding:4px 16px 5px; border-radius:999px;
+}
+#banner .b2 {
+  font-size:clamp(2rem,9vw,3.4rem);
+  font-weight:700;
+  color:#fff;
+  text-shadow:0 4px 0 rgba(0,0,0,0.28), 0 0 18px rgba(0,0,0,0.18);
+  line-height:1.15;
+  margin-top:6px;
+}
+#banner .b3 {
+  font-size:15px; font-weight:600; color:#3c4248;
+  background:rgba(255,255,255,0.85);
+  display:inline-block; padding:4px 14px; border-radius:999px; margin-top:8px;
+  max-width:90%;
+}
+@keyframes banner {
+  0%   { opacity:0; transform:scale(.7); }
+  14%  { opacity:1; transform:scale(1.04); }
+  22%  { transform:scale(1); }
+  78%  { opacity:1; transform:scale(1); }
+  100% { opacity:0; transform:scale(1.08); }
+}
+
+/* Red glow around the screen when only one state is left */
+#danger {
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:15;
+  box-shadow:inset 0 0 90px 24px rgba(232,53,43,0.55);
+  opacity:0;
+  transition:opacity .3s;
+}
+body.danger #danger { animation:danger 1s ease-in-out infinite; }
+@keyframes danger { 0%,100% { opacity:.35; } 50% { opacity:1; } }
 
 .spinner {
   width:40px; height:40px;
@@ -276,32 +484,70 @@ body {
 @keyframes spin { to { transform:rotate(360deg); } }
 #load-label { font-size:14px; font-weight:600; letter-spacing:2px; color:#8a9096; margin-bottom:8px; }
 #load-err   { display:none; color:var(--red); font-size:13px; margin-top:14px; line-height:1.6; }
+
+@media (max-width:480px) {
+  .card { padding:26px 22px 24px; border-radius:24px; }
+  .card.wide { padding:20px 14px 18px; }
+  #lv-grid { grid-template-columns:repeat(auto-fill,minmax(104px,1fr)); gap:10px; }
+  .stars svg { width:46px; height:46px; }
+  .stars svg:nth-child(2) { width:56px; height:56px; }
+  #lvl-name { font-size:13px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .card, .stars svg.on, #banner.show, body.danger #danger { animation-duration:.01s; }
+}
 </style>
 </head>
 <body>
 
-<div id="top-ui">
-  <div id="progress-bar">
-    <div class="pb-seg" id="pb-blue"  style="background:#2e9bf0;width:0%"></div>
-    <div class="pb-seg" id="pb-red"   style="background:#e8352b;width:0%"></div>
-    <div class="pb-seg" id="pb-green" style="background:#4fd858;width:0%"></div>
-    <div class="pb-seg" id="pb-gray"  style="background:#9a9a9a;width:100%"></div>
-  </div>
-</div>
-
 <div id="map-wrapper">
-<svg id="game-svg" viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg">
+<svg id="game-svg" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <radialGradient id="haze-g"><stop offset="0" stop-color="#17803f" stop-opacity=".24"/><stop offset="1" stop-color="#17803f" stop-opacity="0"/></radialGradient>
+  <radialGradient id="haze-r"><stop offset="0" stop-color="#e8352b" stop-opacity=".2"/><stop offset="1" stop-color="#e8352b" stop-opacity="0"/></radialGradient>
+  <clipPath id="land-clip"><path id="land-clip-path"/></clipPath>
+  <g id="india-src"></g>
+</defs>
+<g id="landlayer">
+  <path class="land" id="land-asia"/>
+  <path class="land" id="land-misc"/>
+  <g clip-path="url(#land-clip)">
+    <circle cx="120" cy="300" r="330" fill="url(#haze-g)"/>
+    <circle cx="640" cy="170" r="430" fill="url(#haze-r)"/>
+  </g>
+</g>
+<use href="#india-src" id="india-shadow" fill="rgba(52,74,92,0.28)" stroke="none"/>
 <g id="statelayer"></g>
 <g id="lblayer"></g>
 <g id="arrow" style="display:none"><line id="arrow-line"/><polygon id="arrow-head"/></g>
+<g id="tut" style="display:none"><line id="tut-line"/><polygon id="tut-head"/><circle id="tut-ring"/><circle id="tut-dot"/></g>
 </svg>
 <canvas id="fx"></canvas>
 </div>
 
-<div id="hint" style="opacity:0">Drag from your blue state to send all troops</div>
+<div id="danger"></div>
+
+<div id="top-ui">
+  <button class="ibtn" id="pause-btn" aria-label="Pause">
+    <svg viewBox="0 0 24 24"><rect x="5" y="4" width="5" height="16" rx="1.5"/><rect x="14" y="4" width="5" height="16" rx="1.5"/></svg>
+  </button>
+  <div id="top-mid">
+    <div id="lvl-name"></div>
+    <div id="progress-bar">
+      <div class="pb-seg" id="pb-blue"  style="background:var(--blue);width:0%"></div>
+      <div class="pb-seg" id="pb-red"   style="background:var(--red);width:0%"></div>
+      <div class="pb-seg" id="pb-green" style="background:var(--green);width:0%"></div>
+      <div class="pb-seg" id="pb-gray"  style="background:var(--gray);width:100%"></div>
+    </div>
+  </div>
+  <button class="ibtn" id="mute-btn" aria-label="Sound"></button>
+</div>
+
+<div id="banner"><div class="b1" id="bn-1"></div><div class="b2" id="bn-2"></div><div class="b3" id="bn-3"></div></div>
+<div id="hint"></div>
 
 <!-- LOADING -->
-<div class="overlay" id="load-scr">
+<div class="overlay solid" id="load-scr">
   <div class="card">
     <div class="spinner"></div>
     <div id="load-label">LOADING INDIA MAP…</div>
@@ -312,195 +558,63 @@ body {
 <!-- START -->
 <div class="overlay" id="start-scr" style="display:none">
   <div class="card">
-    <h1 style="margin-bottom:16px">Stateio India</h1>
+    <h1>Stateio India</h1>
+    <div class="tag">Defend every state</div>
     <div class="desc">
-      Drag an arrow from your <strong style="color:#2e9bf0">blue</strong> state's circle<br>
-      to another circle to send your troops.
+      Invaders are pouring across the borders.<br>
+      Drag from your circle to another circle to send your troops.
     </div>
-    <div class="legend">
-      <div class="li"><div class="ldot" style="background:#2e9bf0"></div>You</div>
-      <div class="li"><div class="ldot" style="background:#e8352b"></div>Red</div>
-      <div class="li"><div class="ldot" style="background:#4fd858"></div>Green</div>
-      <div class="li"><div class="ldot" style="background:#9a9a9a"></div>Neutral</div>
+    <div class="legend" id="legend"></div>
+    <button class="btn block" id="start-btn">Play</button>
+    <button class="btn sm ghost" id="levels-btn">Levels</button>
+    <div class="tip">Drive every invader out to win the level</div>
+  </div>
+</div>
+
+<!-- LEVEL SELECT -->
+<div class="overlay" id="lv-scr" style="display:none">
+  <div class="card wide">
+    <h2>Choose a front</h2>
+    <div id="lv-grid"></div>
+    <div class="row"><button class="btn sm ghost" id="lv-back">Back</button></div>
+  </div>
+</div>
+
+<!-- PAUSE -->
+<div class="overlay" id="pause-scr" style="display:none">
+  <div class="card">
+    <h2>Paused</h2>
+    <button class="btn block" id="resume-btn">Resume</button>
+    <div class="row">
+      <button class="btn sm ghost" id="p-restart">Restart</button>
+      <button class="btn sm ghost" id="p-levels">Levels</button>
+      <button class="btn sm ghost" id="p-sound">Sound on</button>
     </div>
-    <button class="btn" id="start-btn">Play</button>
-    <div class="tip">Conquer every rival state to win</div>
+    <div class="tip">Three stars: win without losing a single state</div>
   </div>
 </div>
 
 <!-- RESULT -->
 <div class="overlay" id="res-scr" style="display:none">
   <div class="card">
-    <span class="bigicon" id="res-icon"></span>
-    <h1 id="res-title"></h1>
+    <div class="ribbon" id="res-ribbon"></div>
+    <div class="stars" id="res-stars"></div>
     <p id="res-msg"></p>
-    <button class="btn" id="restart-btn">Play again</button>
+    <div class="stats">
+      <div><b id="rs-time">0:00</b><span>Time</span></div>
+      <div><b id="rs-cap">0</b><span>Captured</span></div>
+      <div><b id="rs-lost">0</b><span>Lost</span></div>
+    </div>
+    <button class="btn block" id="next-btn">Next level</button>
+    <div class="row">
+      <button class="btn sm ghost" id="retry-btn">Retry</button>
+      <button class="btn sm ghost" id="r-levels">Levels</button>
+    </div>
   </div>
 </div>
 
 <script>
 'use strict';
-
-// ══════════════════════════════════════════════════════
-//  CONSTANTS
-// ══════════════════════════════════════════════════════
-
-// Playable territories (exactly the ones the game logic supports)
-const VALID_STATES = new Set([
-  'Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh',
-  'Goa','Gujarat','Haryana','Himachal Pradesh','Jharkhand','Karnataka',
-  'Kerala','Madhya Pradesh','Maharashtra','Manipur','Meghalaya',
-  'Mizoram','Nagaland','Odisha','Punjab','Rajasthan','Sikkim',
-  'Tamil Nadu','Telangana','Tripura','Uttar Pradesh','Uttarakhand',
-  'West Bengal','Jammu & Kashmir','Ladakh'
-]);
-
-// Map any spelling/name variant that appears in the provided in.svg (or GeoJSON)
-// to our canonical game name. Return null to exclude (small UTs, islands, etc).
-const NORMALIZE = {
-  // old spellings from the SVG
-  'Orissa': 'Odisha',
-  'Uttaranchal': 'Uttarakhand',
-  'Chhattishgarh': 'Chhattisgarh',
-
-  // exact strings from in.svg (with accents / "and" variations)
-  'Jammu and Kashmir': 'Jammu & Kashmir',
-  'Dādra and Nagar Haveli and Damān and Diu': null,
-  'Dadra and Nagar Haveli and Daman and Diu': null,
-  'Andaman and Nicobar': null,
-
-  // common exclusions (small UTs + islands we do not play)
-  'Andaman & Nicobar Island': null,
-  'Chandigarh': null,
-  'Delhi': null,
-  'NCT of Delhi': null,
-  'Lakshadweep': null,
-  'Pondicherry': null,
-  'Puducherry': null,
-  'Dadra & Nagar Haveli': null,
-  'Daman & Diu': null,
-  'Daman and Diu': null,
-};
-
-const SHORT = {
-  'Andhra Pradesh':'AP','Arunachal Pradesh':'AR','Assam':'AS',
-  'Bihar':'BR','Chhattisgarh':'CG','Goa':'GA','Gujarat':'GJ',
-  'Haryana':'HR','Himachal Pradesh':'HP','Jharkhand':'JH',
-  'Karnataka':'KA','Kerala':'KL','Madhya Pradesh':'MP',
-  'Maharashtra':'MH','Manipur':'MN','Meghalaya':'ML',
-  'Mizoram':'MZ','Nagaland':'NL','Odisha':'OD','Punjab':'PB',
-  'Rajasthan':'RJ','Sikkim':'SK','Tamil Nadu':'TN',
-  'Telangana':'TG','Tripura':'TR','Uttar Pradesh':'UP',
-  'Uttarakhand':'UK','West Bengal':'WB',
-  'Jammu & Kashmir':'JK','Ladakh':'LA'
-};
-
-const OC = {
-  blue:'#2e9bf0', red:'#e8352b', green:'#4fd858', neutral:'#9a9a9a'
-};
-
-// A state's fill runs from a pale tint when it is nearly empty to the full
-// owner colour once it holds FULL_AT troops
-const PALE    = { blue:'#c4e2fa', red:'#f6b9b3', green:'#c3f1c5' };
-const FULL_AT = 40;
-
-function hexRgb(h) {
-  return [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
-}
-const SHADE = {};
-['blue', 'red', 'green'].forEach(o => { SHADE[o] = [hexRgb(PALE[o]), hexRgb(OC[o])]; });
-
-function shade(owner, troops) {
-  if (owner === 'neutral') return OC.neutral;
-  const k = Math.max(0, Math.min(1, troops / FULL_AT));
-  const [a, b] = SHADE[owner];
-  return 'rgb(' + a.map((v, i) => Math.round(v + (b[i] - v) * k)).join(',') + ')';
-}
-
-// Emblem shown inside each owner's centre circles
-const EMBLEM = { blue:'\u2605', red:'\u25C6', green:'\u269C\uFE0E' };
-
-const BLUE_START  = ['Punjab','Haryana','Uttarakhand'];
-const RED_START   = ['Arunachal Pradesh','Assam','Nagaland'];
-const GREEN_START = ['Tamil Nadu','Kerala','Karnataka'];
-
-// ══════════════════════════════════════════════════════
-//  DYNAMIC MAPS (populated from in.svg)
-// ══════════════════════════════════════════════════════
-
-let CX       = {};   // name → [cx, cy]  using the exact label points from the provided SVG
-let ID2NAME  = {};   // svg-element-id → state name
-let NAME2ID  = {};   // state name → svg-element-id
-
-// ══════════════════════════════════════════════════════
-//  GAME STATE
-// ══════════════════════════════════════════════════════
-
-let T        = {};   // name → { owner, troops }
-let units    = [];   // troops on the march
-let emitters = [];   // marches still leaving their state
-let puffs    = [];   // smoke where enemy units met
-let dirty    = false; // state changed this frame → re-render once
-let running  = false;
-let raf      = null;
-let lastTs   = 0, lastTroop = 0, lastAI = 0;
-
-const svg        = document.getElementById('game-svg');
-const statelayer = document.getElementById('statelayer');
-const lblayer    = document.getElementById('lblayer');
-const wrapEl     = document.getElementById('map-wrapper');
-const fx         = document.getElementById('fx');
-const ctx        = fx.getContext('2d');
-let fxKey        = '';
-const arrowEl    = document.getElementById('arrow');
-const arrowLine  = document.getElementById('arrow-line');
-const arrowHead  = document.getElementById('arrow-head');
-const hintEl     = document.getElementById('hint');
-
-const elT = {};     // name → troop <text>
-const elI = {};     // name → icon  <text>
-const elN = {};     // name → centre <circle>
-
-let dragSrc  = null;
-let dragTgt  = null;
-let selState = null;
-
-// Troop units: one dot per troop, marching in rows at one constant speed
-const WORLD_SPEED = 40;                     // SVG units per second
-const UNIT_R      = 2.2;                     // dot radius
-const UNIT_GAP    = 5.5;                     // spacing within a row and between rows
-const ROW_WIDTH   = 4;                       // dots per row
-const ROW_TIME    = UNIT_GAP / WORLD_SPEED;  // seconds between rows leaving a state
-const FUNNEL      = 16;                      // distance over which a column fans out / closes in
-const HIT_R       = 4.5;                     // enemy dots closer than this cancel out
-const PUFF_LIFE   = 0.5;                     // seconds a smoke puff lasts
-
-// Centre circles: radius, touch distance, and a darker shade of each owner's colour
-const NODE_R   = 7;
-const NODE_HIT = NODE_R + 4;   // how close the arrow tip must get to count as touching
-const NC = { blue:'#24598c', red:'#8f1711', green:'#1d7a27', neutral:'#ffffff' };
-
-// Dot colours — the same dark shades as the centre circles
-const UC = { blue:'#24598c', red:'#8f1711', green:'#1d7a27' };
-
-// How often each AI thinks (ms), and how many of its states may attack alone per turn
-const AI_INTERVAL    = 3000;
-const AI_MAX_SOURCES = 1;
-// Chance per turn that an AI also tries a pooled strike on a strong territory
-const AI_POOL_CHANCE = 0.3;
-
-// ══════════════════════════════════════════════════════
-//  MAP LOADING — use the EXACT paths + label positions from in.svg
-//  This makes the map visually identical to the SVG you provided.
-// ══════════════════════════════════════════════════════
-
-function normalizeName(raw) {
-  if (!raw) return null;
-  if (Object.prototype.hasOwnProperty.call(NORMALIZE, raw)) {
-    return NORMALIZE[raw];
-  }
-  return raw;
-}
 
 // Inlined version of in.svg so everything works in a single file (double-click friendly)
 const MAP_SVG_TEXT = `<?xml version="1.0"?>
@@ -668,107 +782,577 @@ const MAP_SVG_TEXT = `<?xml version="1.0"?>
  </g>
 </svg>`;
 
-// <-- will be filled by the build step for standalone version
+// ══════════════════════════════════════════════════════
+//  CONSTANTS
+// ══════════════════════════════════════════════════════
 
-async function loadMap() {
+// Playable territories (exactly the ones the game logic supports)
+const VALID_STATES = new Set([
+  'Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh',
+  'Goa','Gujarat','Haryana','Himachal Pradesh','Jharkhand','Karnataka',
+  'Kerala','Madhya Pradesh','Maharashtra','Manipur','Meghalaya',
+  'Mizoram','Nagaland','Odisha','Punjab','Rajasthan','Sikkim',
+  'Tamil Nadu','Telangana','Tripura','Uttar Pradesh','Uttarakhand',
+  'West Bengal','Jammu & Kashmir','Ladakh'
+]);
+
+// Map any spelling/name variant that appears in the map data to our canonical
+// game name. null = drawn but not playable (small UTs, islands).
+const NORMALIZE = {
+  'Orissa': 'Odisha',
+  'Uttaranchal': 'Uttarakhand',
+  'Chhattishgarh': 'Chhattisgarh',
+  'Jammu and Kashmir': 'Jammu & Kashmir',
+  'Dādra and Nagar Haveli and Damān and Diu': null,
+  'Dadra and Nagar Haveli and Daman and Diu': null,
+  'Andaman and Nicobar': null,
+  'Andaman & Nicobar Island': null,
+  'Chandigarh': null,
+  'Delhi': null,
+  'NCT of Delhi': null,
+  'Lakshadweep': null,
+  'Pondicherry': null,
+  'Puducherry': null,
+  'Dadra & Nagar Haveli': null,
+  'Daman & Diu': null,
+  'Daman and Diu': null,
+};
+
+const SHORT = {
+  'Andhra Pradesh':'AP','Arunachal Pradesh':'AR','Assam':'AS',
+  'Bihar':'BR','Chhattisgarh':'CG','Goa':'GA','Gujarat':'GJ',
+  'Haryana':'HR','Himachal Pradesh':'HP','Jharkhand':'JH',
+  'Karnataka':'KA','Kerala':'KL','Madhya Pradesh':'MP',
+  'Maharashtra':'MH','Manipur':'MN','Meghalaya':'ML',
+  'Mizoram':'MZ','Nagaland':'NL','Odisha':'OD','Punjab':'PB',
+  'Rajasthan':'RJ','Sikkim':'SK','Tamil Nadu':'TN',
+  'Telangana':'TG','Tripura':'TR','Uttar Pradesh':'UP',
+  'Uttarakhand':'UK','West Bengal':'WB',
+  'Jammu & Kashmir':'JK','Ladakh':'LA'
+};
+
+const SVGNS = 'http://www.w3.org/2000/svg';
+
+// ── Sides ─────────────────────────────────────────────
+// blue = the player. red = the invader from the north and east,
+// green = the invader from the west.
+const SIDES = ['blue', 'red', 'green'];
+const OC = { blue:'#2e9bf0', red:'#e8352b', green:'#17803f', neutral:'#9ea4aa' };
+const SIDE_NAME = { blue:'You', red:'Northern Front', green:'Western Front' };
+
+// A state's fill runs from a pale tint when it is nearly empty to the full
+// owner colour once it holds FULL_AT troops
+const PALE    = { blue:'#c4e2fa', red:'#f8c3bc', green:'#bfe3cc' };
+const FULL_AT = 40;
+
+// Centre circles and marching dots use a darker shade of each side's colour;
+// the emblem inside the circle is drawn in EC
+const NC = { blue:'#12408f', red:'#b3140b', green:'#01411c', neutral:'#ffffff' };
+const UC = { blue:'#1b4fa3', red:'#a5120a', green:'#01411c' };
+const EC = { blue:'#ffffff', red:'#ffde00', green:'#ffffff' };
+
+function hexRgb(h) {
+  return [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+}
+const SHADE = {};
+SIDES.forEach(o => { SHADE[o] = [hexRgb(PALE[o]), hexRgb(OC[o])]; });
+
+function shade(owner, troops) {
+  if (owner === 'neutral') return OC.neutral;
+  const k = Math.max(0, Math.min(1, troops / FULL_AT));
+  const [a, b] = SHADE[owner];
+  return 'rgb(' + a.map((v, i) => Math.round(v + (b[i] - v) * k)).join(',') + ')';
+}
+
+// ── Emblems (drawn in a unit circle, scaled into each centre circle) ──
+
+function starD(cx, cy, R, r) {
+  let d = '';
+  for (let i = 0; i < 10; i++) {
+    const a = i * Math.PI / 5, q = i % 2 ? r : R;
+    d += (i ? 'L' : 'M') + (cx + Math.sin(a) * q).toFixed(3) + ' ' + (cy - Math.cos(a) * q).toFixed(3);
+  }
+  return d + 'Z';
+}
+
+// Spoked wheel
+function wheelD() {
+  let d = 'M.92 0A.92 .92 0 1 1 -.92 0A.92 .92 0 1 1 .92 0';
+  for (let i = 0; i < 12; i++) {
+    const c = Math.cos(i * Math.PI / 6), s = Math.sin(i * Math.PI / 6);
+    d += 'M' + (c * 0.2).toFixed(3) + ' ' + (s * 0.2).toFixed(3) +
+         'L' + (c * 0.92).toFixed(3) + ' ' + (s * 0.92).toFixed(3);
+  }
+  return d;
+}
+
+// Crescent opening to the upper right, with a small star in its mouth
+function crescentD() {
+  const A = -40 * Math.PI / 180, ca = Math.cos(A), sa = Math.sin(A);
+  const rot = (x, y) => [(x + 0.16) * ca - y * sa, (x + 0.16) * sa + y * ca];
+  const f = p => p[0].toFixed(3) + ' ' + p[1].toFixed(3);
+  // Outer circle r=1 at the origin, hollow r=.82 at (.42, 0): they cross at (.6, ±.8)
+  const p1 = rot(0.6, -0.8), p2 = rot(0.6, 0.8), st = rot(0.5, 0);
+  return 'M' + f(p1) + 'A1 1 0 1 0 ' + f(p2) + 'A.82 .82 0 1 1 ' + f(p1) + 'Z' +
+         starD(st[0], st[1], 0.36, 0.15);
+}
+
+const EMBLEM = {
+  blue:  { d: wheelD(),              k: 0.68, line: true },
+  red:   { d: starD(0, 0.05, 1, 0.4), k: 0.64 },
+  green: { d: crescentD(),           k: 0.6 }
+};
+
+function emblemAttrs(owner) {
+  return EMBLEM[owner].line
+    ? 'fill="none" stroke="' + EC[owner] + '" stroke-width=".17" stroke-linecap="round"'
+    : 'fill="' + EC[owner] + '"';
+}
+
+// Emblem on its coloured disc, for buttons and legends
+function emblemSvg(owner, px) {
+  const e = EMBLEM[owner];
+  return '<svg width="' + px + '" height="' + px + '" viewBox="-1.5 -1.5 3 3">' +
+    '<circle r="1.5" fill="' + NC[owner] + '"/>' +
+    '<path transform="scale(' + e.k * 1.45 + ')" d="' + e.d + '" ' + emblemAttrs(owner) + '/></svg>';
+}
+
+const STAR_SVG = '<path d="M12 2l3.1 6.6 7.1.9-5.2 5 1.3 7.1L12 18.1 5.7 21.6 7 14.5l-5.2-5 7.1-.9z"/>';
+const LOCK_SVG = '<path d="M6 10V8a6 6 0 1 1 12 0v2h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1zm3 0h6V8a3 3 0 0 0-6 0z"/>';
+const SND_ON  = '<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+const SND_OFF = '<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+
+// ── Neighbouring land (rough outlines, only there to frame the map) ──
+const LAND_ASIA = 'M-3000 -3000L4000 -3000L4000 278L1573 278L1519 372L1436 478L1354 513L1258 543L1204 534L1152 575L1130 616L1176 682L1223 781L1217 823L1163 854L1102 904L1105 856L1053 831L1034 803L996 770L971 772L968 823L949 865L971 906L998 951L1034 973L1064 1025L1086 1102L1067 1104L1007 1060L982 992L924 923L933 865L930 809L919 753L905 682L883 665L861 690L842 702L815 696L820 653L796 598L774 575L757 555L749 525L744 507L719 510L705 525L675 528L100 472L81 463L67 439L56 424L-1 427L-61 430L-108 424L-154 418L-198 411L-223 436L-201 466L-163 475L-130 507L-163 569L-184 610L-223 642L-286 668L-338 693L-425 739L-535 787L-576 789L-3000 789Z';
+const LAND_MISC =
+  'M421 870L432 879L456 904L473 934L470 962L453 973L429 975L421 951L418 920L415 895Z' +
+  'M842 986L903 997L971 1071L1067 1140L1135 1222L1130 1302L1094 1299L1026 1236L979 1165L935 1093L889 1044Z' +
+  'M-582 823L-549 854L-480 831L-365 815L-376 854L-425 962L-508 1071L-603 1154L-686 1263L-3000 1263L-3000 823Z';
+
+// ── Levels ────────────────────────────────────────────
+// states: territories in play. start: where each side begins.
+// neutral: troops a neutral state holds (and regrows to). troops: starting
+// troops of every owned state. think: ms between enemy decisions.
+// army: troops an enemy state needs before it attacks. sources: how many
+// enemy states may attack alone per turn. pool: chance of a joint strike.
+// rival: how much the enemy prefers hitting a rival over a neutral (40 = no preference).
+// reach: the longest march, in seconds, the enemy is happy to make.
+// recruit: enemy troop growth as a fraction of ours.
+const NORTH_EAST = ['Arunachal Pradesh','Assam','Nagaland','Manipur','Mizoram','Tripura','Meghalaya'];
+
+const LEVELS = [
+  { name:'Seven Sisters',
+    blurb:'They are coming down from the north. Hold the hills.',
+    states: NORTH_EAST,
+    start:{ blue:['Tripura'], red:['Arunachal Pradesh'] },
+    neutral:10, troops:20, think:4200, rival:20, reach:6, recruit:0.6, army:14, sources:1, pool:0.15 },
+  { name:'Western Front',
+    blurb:'The desert border has been breached. Push them back.',
+    states:['Punjab','Haryana','Rajasthan','Gujarat','Madhya Pradesh','Maharashtra','Uttar Pradesh'],
+    start:{ blue:['Uttar Pradesh'], green:['Gujarat'] },
+    neutral:15, troops:20, think:3800, rival:25, reach:8, recruit:0.7, army:12, sources:1, pool:0.2 },
+  { name:'Northern Heights',
+    blurb:'The high passes have fallen. Take back the mountains.',
+    states:['Ladakh','Jammu & Kashmir','Himachal Pradesh','Uttarakhand','Punjab','Haryana','Uttar Pradesh','Rajasthan'],
+    start:{ blue:['Haryana'], red:['Ladakh'] },
+    neutral:20, troops:25, think:3500, rival:30, reach:10, recruit:0.75, army:12, sources:1, pool:0.3 },
+  { name:'Coastal Raid',
+    blurb:'Landings on both coasts. You are caught in the middle.',
+    states:['Maharashtra','Goa','Karnataka','Kerala','Tamil Nadu','Andhra Pradesh','Telangana','Odisha','Chhattisgarh'],
+    start:{ blue:['Telangana'], red:['Odisha'], green:['Kerala'] },
+    neutral:20, troops:25, think:3300, rival:30, reach:99, recruit:0.6, army:12, sources:1, pool:0.3 },
+  { name:'Eastern Gate',
+    blurb:'Two columns are closing on the narrow corridor.',
+    states:['Sikkim','West Bengal','Bihar','Jharkhand','Odisha'].concat(NORTH_EAST),
+    start:{ blue:['Jharkhand'], red:['Arunachal Pradesh','Sikkim'] },
+    neutral:20, troops:25, think:3000, rival:30, reach:99, recruit:0.6, army:12, sources:1, pool:0.3 },
+  { name:'Two-Front War',
+    blurb:'North and west attack together. Do not get squeezed.',
+    states:['Ladakh','Jammu & Kashmir','Himachal Pradesh','Uttarakhand','Punjab','Haryana','Rajasthan',
+            'Gujarat','Uttar Pradesh','Madhya Pradesh','Maharashtra','Bihar','Chhattisgarh'],
+    start:{ blue:['Madhya Pradesh'], red:['Ladakh'], green:['Gujarat'] },
+    neutral:20, troops:25, think:2800, rival:40, reach:99, recruit:0.75, army:12, sources:1, pool:0.3 },
+  { name:'Battle for Bharat',
+    blurb:'Every border is burning. Reclaim the whole nation.',
+    states:[...VALID_STATES],
+    start:{ blue:['Madhya Pradesh','Karnataka'], red:['Arunachal Pradesh','Ladakh'], green:['Gujarat','Punjab'] },
+    neutral:20, troops:25, think:2500, rival:45, reach:99, recruit:1, army:12, sources:2, pool:0.35 }
+];
+LEVELS.forEach(lv => { lv.enemies = SIDES.filter(s => s !== 'blue' && lv.start[s]); });
+
+// Owned states gain a troop every GROW_MS until they hold GROW_CAP;
+// neutral states regrow at half that rate, up to the level's neutral count
+const GROW_MS  = 500;
+const GROW_CAP = 50;
+
+// ══════════════════════════════════════════════════════
+//  SAVED PROGRESS
+// ══════════════════════════════════════════════════════
+
+const SAVE_KEY = 'stateio-india-save-v1';
+const save = { unlocked:1, stars:[], best:[], muted:false, tut:false };
+
+function loadSave() {
   try {
-    let svgText;
+    const s = JSON.parse(localStorage.getItem(SAVE_KEY));
+    if (s && typeof s === 'object') Object.assign(save, s);
+  } catch (e) { /* private mode / blocked storage: play without saving */ }
+  if (!Array.isArray(save.stars)) save.stars = [];
+  if (!Array.isArray(save.best))  save.best  = [];
+  save.unlocked = Math.max(1, Math.min(LEVELS.length, save.unlocked | 0));
+}
+function writeSave() {
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* ignore */ }
+}
+loadSave();
 
-    if (typeof MAP_SVG_TEXT === 'string' && MAP_SVG_TEXT.length > 5000) {
-      // Standalone single-file mode (inlined data)
-      svgText = MAP_SVG_TEXT;
-    } else {
-      // Development mode: load external in.svg (needs local server)
-      const res = await fetch('in.svg');
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      svgText = await res.text();
+// ══════════════════════════════════════════════════════
+//  DYNAMIC MAPS (populated from the map data)
+// ══════════════════════════════════════════════════════
+
+let CX       = {};   // name → [cx, cy]  the map's own label points
+let BB       = {};   // name → bounding box of the state's outline
+let ID2NAME  = {};   // svg-element-id → state name
+let NAME2ID  = {};   // state name → svg-element-id
+
+// ══════════════════════════════════════════════════════
+//  GAME STATE
+// ══════════════════════════════════════════════════════
+
+let T        = {};   // name → { owner, troops }
+let units    = [];   // troops on the march
+let emitters = [];   // marches still leaving their state
+let puffs    = [];   // smoke where enemy units met
+let rings    = [];   // ripples where a state changed hands
+let floaters = [];   // "Punjab captured!" callouts
+let bumps    = {};   // name → centre-circle bounce in progress
+let threat   = new Set();  // our states with enemy troops heading for them
+let dirty    = false; // state changed this frame → re-render once
+let running  = false; // a match (or the menu demo) is being simulated
+let paused   = false;
+let demo     = false; // the self-playing match behind the menus
+let level    = 0;
+let LV       = LEVELS[0];
+let clock    = 0;     // ms of game time in this match (stops while paused)
+let lastGrow = 0, growTick = 0, lastThreat = 0;
+let nextAI   = {};    // side → game time of its next decision
+let stats    = { captured:0, lost:0, peak:0 };
+let danger   = false;
+let runId    = 0;     // bumped on every (re)start, so stale timers do nothing
+let raf      = null;
+let lastTs   = 0;
+
+const svg        = document.getElementById('game-svg');
+const statelayer = document.getElementById('statelayer');
+const lblayer    = document.getElementById('lblayer');
+const wrapEl     = document.getElementById('map-wrapper');
+const fx         = document.getElementById('fx');
+const ctx        = fx.getContext('2d');
+const arrowEl    = document.getElementById('arrow');
+const arrowLine  = document.getElementById('arrow-line');
+const arrowHead  = document.getElementById('arrow-head');
+const hintEl     = document.getElementById('hint');
+const $          = id => document.getElementById(id);
+
+const elT = {};     // name → troop <text>
+const elI = {};     // name → emblem <path>
+const elN = {};     // name → centre <circle>
+
+let dragSrc  = null;
+let dragTgt  = null;
+let selState = null;
+
+// ── Scale ─────────────────────────────────────────────
+// Levels zoom in on part of the map, so every size is tied to the level:
+// SC scales the rules (speed, spacing) to the area in play, so a march
+// between neighbours takes about as long on every level; VS scales what is
+// drawn (circles, text) so it stays readable at the current zoom.
+let SC = 1, VS = 1, PXU = 1;
+let WORLD_SPEED, UNIT_R, UNIT_GAP, FUNNEL, HIT_R, NODE_R, NODE_HIT;
+const ROW_WIDTH = 4;                // dots per row
+const ROW_TIME  = 5.5 / 40;         // seconds between rows leaving a state
+const PUFF_LIFE = 0.7;              // seconds a smoke puff lasts
+
+function setScale(sc, vs) {
+  SC = sc; VS = vs;
+  WORLD_SPEED = 40 * SC;                        // map units per second
+  UNIT_GAP    = WORLD_SPEED * ROW_TIME;         // spacing within and between rows
+  FUNNEL      = 16 * SC;                        // distance over which a column fans out / closes in
+  HIT_R       = 4.5 * SC;                       // enemy dots closer than this cancel out
+  UNIT_R      = 2.2 * Math.min(VS, SC * 1.2);   // dot radius
+  NODE_R      = 7 * VS;                         // centre-circle radius
+  // How close the arrow tip must get to a circle to count as touching it:
+  // generous enough for a fingertip, but never reaching a neighbour's circle
+  NODE_HIT    = Math.max(NODE_R + 4 * VS, Math.min(20 / PXU, LV.minDist * 0.45));
+  svg.style.setProperty('--vs', VS);
+}
+
+// ══════════════════════════════════════════════════════
+//  SOUND — synthesised, so the game stays a single file
+// ══════════════════════════════════════════════════════
+
+const SFX = (() => {
+  let ac = null, out = null, noiseBuf = null;
+  const last = {};
+  // Minimum gap (ms) between two plays of the same busy sound
+  const GAP = { pop: 45, hit: 70, send: 60 };
+
+  // Browsers only allow audio to start from a tap or click
+  function unlock() {
+    if (!ac) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      try { ac = new AC(); } catch (e) { ac = null; return; }
+      out = ac.createGain();
+      out.gain.value = 0.6;
+      out.connect(ac.destination);
+      noiseBuf = ac.createBuffer(1, Math.floor(ac.sampleRate * 0.4), ac.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     }
+    if (ac.state === 'suspended') ac.resume();
+  }
 
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(svgText, 'image/svg+xml');
+  function tone(f, dur, o) {
+    o = o || {};
+    const t0 = ac.currentTime + (o.at || 0);
+    const osc = ac.createOscillator(), g = ac.createGain();
+    osc.type = o.type || 'sine';
+    osc.frequency.setValueAtTime(f, t0);
+    if (o.to) osc.frequency.exponentialRampToValueAtTime(o.to, t0 + dur);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(o.vol || 0.2, t0 + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(g); g.connect(out);
+    osc.start(t0); osc.stop(t0 + dur + 0.03);
+  }
 
+  function hiss(dur, f0, f1, vol) {
+    const t0 = ac.currentTime;
+    const src = ac.createBufferSource(), bp = ac.createBiquadFilter(), g = ac.createGain();
+    src.buffer = noiseBuf;
+    bp.type = 'bandpass'; bp.Q.value = 1.2;
+    bp.frequency.setValueAtTime(f0, t0);
+    bp.frequency.exponentialRampToValueAtTime(f1, t0 + dur);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(vol, t0 + dur * 0.3);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    src.connect(bp); bp.connect(g); g.connect(out);
+    src.start(t0); src.stop(t0 + dur + 0.03);
+  }
+
+  const seq = (notes, step, dur, o) =>
+    notes.forEach((f, i) => tone(f, dur, Object.assign({}, o, { at: i * step })));
+
+  const S = {
+    click()   { tone(540, 0.06, { type: 'triangle', vol: 0.14 }); },
+    send()    { hiss(0.24, 500, 2400, 0.16); tone(250, 0.15, { to: 520, type: 'triangle', vol: 0.1 }); },
+    pop()     { tone(520 + Math.random() * 280, 0.05, { type: 'triangle', vol: 0.055 }); },
+    hit()     { tone(170 + Math.random() * 60, 0.05, { type: 'square', vol: 0.03 }); },
+    capture() { seq([523, 659, 784], 0.07, 0.15, { type: 'triangle', vol: 0.2 }); },
+    lost()    { seq([392, 311, 233], 0.09, 0.2, { type: 'sawtooth', vol: 0.09 }); },
+    warn()    { seq([880, 880], 0.22, 0.14, { type: 'square', vol: 0.07 }); },
+    star()    { tone(1175, 0.16, { type: 'triangle', vol: 0.16 }); },
+    win()     { seq([523, 659, 784, 1047, 784, 1047, 1319], 0.11, 0.28, { type: 'triangle', vol: 0.2 }); },
+    lose()    { seq([392, 370, 330, 262, 196], 0.2, 0.42, { type: 'sawtooth', vol: 0.08 }); }
+  };
+
+  function play(name) {
+    if (demo || save.muted || !ac || ac.state !== 'running') return;
+    const now = performance.now();
+    if (GAP[name] && now - (last[name] || 0) < GAP[name]) return;
+    last[name] = now;
+    try { S[name](); } catch (e) { /* never let audio break the game */ }
+  }
+
+  return { unlock, play };
+})();
+
+function buzz(pattern) {
+  if (demo) return;
+  try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (e) { /* unsupported */ }
+}
+
+function setMuted(m) {
+  save.muted = m;
+  writeSave();
+  const b = $('mute-btn');
+  b.innerHTML = m ? SND_OFF : SND_ON;
+  b.classList.toggle('off', m);
+  $('p-sound').textContent = m ? 'Sound off' : 'Sound on';
+}
+
+// ══════════════════════════════════════════════════════
+//  MAP LOADING — the exact outlines + label points of the map data
+// ══════════════════════════════════════════════════════
+
+function normalizeName(raw) {
+  if (!raw) return null;
+  if (Object.prototype.hasOwnProperty.call(NORMALIZE, raw)) return NORMALIZE[raw];
+  return raw;
+}
+
+const slug = name => name.replace(/[\s&,./]+/g, '-').toLowerCase();
+
+function loadMap() {
+  try {
+    const doc = new DOMParser().parseFromString(MAP_SVG_TEXT, 'image/svg+xml');
     const featuresG = doc.querySelector('#features');
     const labelsG   = doc.querySelector('#label_points');
+    if (!featuresG) throw new Error('Could not find #features in the map data');
 
-    if (!featuresG) throw new Error('Could not find #features in in.svg');
+    $('land-asia').setAttribute('d', LAND_ASIA);
+    $('land-misc').setAttribute('d', LAND_MISC);
+    $('land-clip-path').setAttribute('d', LAND_ASIA);
+    const srcG = $('india-src');
 
-    // 1. Inject the *exact* <path> elements from your in.svg so the map is visually identical.
-    //    We draw every named region the SVG contains (including small islands/UTs as background).
-    //    Only the ones in VALID_STATES become playable with troops/labels.
+    // 1. Every named region is drawn; only those in VALID_STATES are playable.
+    //    A second, unstyled copy of each outline goes into <defs> — the map's
+    //    drop shadow and the level-select thumbnails are drawn from it.
     featuresG.querySelectorAll('path').forEach(origPath => {
       const rawName = origPath.getAttribute('name');
       if (!rawName) return;
 
-      const norm = normalizeName(rawName) || rawName; // use raw if we don't normalize it away
-      const id = 'st-' + norm.replace(/[\s&,./]+/g, '-').toLowerCase();
+      const playable = normalizeName(rawName);
+      const norm = playable || rawName;
+      const id = 'st-' + slug(norm);
 
       const el = origPath.cloneNode(true);
       el.setAttribute('id', id);
       el.setAttribute('data-name', norm);
-      el.setAttribute('class', 'state');
-
-      // Let our renderAll control the fill
       el.removeAttribute('fill');
       el.removeAttribute('stroke');
 
-      statelayer.appendChild(el);
+      const copy = el.cloneNode(true);
+      copy.setAttribute('id', 'mp-' + slug(norm));
+      srcG.appendChild(copy);
 
-      // Only set up interaction/centers for states the game actually plays
-      const playable = normalizeName(rawName);
       if (playable && VALID_STATES.has(playable)) {
-        ID2NAME[id]   = playable;
+        el.setAttribute('class', 'out');
+        ID2NAME[id] = playable;
         NAME2ID[playable] = id;
       } else {
         el.setAttribute('class', 'inert');
       }
+      statelayer.appendChild(el);
     });
 
-    // 2. Use the exact pre-placed label centers that come with your SVG.
-    //    These positions were chosen by the map author for this specific drawing.
+    // 2. The label points that come with the map are the states' centres
     if (labelsG) {
       labelsG.querySelectorAll('circle').forEach(c => {
         const raw = c.getAttribute('class');
         if (!raw || /^\d/.test(raw)) return;
-
         const playable = normalizeName(raw);
         if (playable && VALID_STATES.has(playable) && !CX[playable]) {
           const cx = parseFloat(c.getAttribute('cx'));
           const cy = parseFloat(c.getAttribute('cy'));
-          if (!isNaN(cx) && !isNaN(cy)) {
-            CX[playable] = [cx, cy];
-          }
+          if (!isNaN(cx) && !isNaN(cy)) CX[playable] = [cx, cy];
         }
       });
     }
 
-    // Fallback: if some centers are missing, derive rough ones from path bbox (rare)
-    // (we keep it simple — the label_points in your SVG cover the important ones)
+    const missing = [...VALID_STATES].filter(nm => !CX[nm] || !NAME2ID[nm]);
+    if (missing.length) throw new Error('Map data is missing: ' + missing.join(', '));
 
-    if (Object.keys(CX).length < 5) {
-      throw new Error('Very few centers found from in.svg label_points');
-    }
-
-    // Make sure every path we pulled from your SVG has a visible fill.
-    // Playable states will be recolored correctly by renderAll() after initGame.
-    statelayer.querySelectorAll('path.state').forEach(el => {
-      if (!el.getAttribute('fill')) {
-        el.setAttribute('fill', OC.neutral);
-      }
+    // 3. Outline boxes, then the area and tightest spacing of every level
+    Object.keys(NAME2ID).forEach(nm => {
+      const b = document.getElementById(NAME2ID[nm]).getBBox();
+      BB[nm] = { x: b.x, y: b.y, w: b.width, h: b.height };
+    });
+    LEVELS.forEach(lv => {
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity, md = Infinity;
+      lv.states.forEach((a, i) => {
+        const b = BB[a];
+        x0 = Math.min(x0, b.x); y0 = Math.min(y0, b.y);
+        x1 = Math.max(x1, b.x + b.w); y1 = Math.max(y1, b.y + b.h);
+        for (let j = 0; j < i; j++) md = Math.min(md, flightLen(a, lv.states[j]));
+      });
+      lv.box = { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+      lv.minDist = md;
     });
 
-    // Hand off to the start screen
-    document.getElementById('load-scr').style.display  = 'none';
-    document.getElementById('start-scr').style.display = 'flex';
+    buildMenus();
+    $('load-scr').style.display = 'none';
+    showStart();
+    lastTs = performance.now();
+    raf = requestAnimationFrame(loop);
 
   } catch (e) {
     console.error('Failed to load map:', e);
-    const err = document.getElementById('load-err');
+    const err = $('load-err');
     err.style.display = 'block';
     err.innerHTML =
       'Failed to load the embedded India map.<br>' +
-      'Something went wrong while parsing the inlined SVG data.';
+      'Something went wrong while reading the map data.';
     document.querySelector('.spinner').style.display = 'none';
   }
+}
+
+// ══════════════════════════════════════════════════════
+//  CAMERA — the view is fitted to the level's states
+// ══════════════════════════════════════════════════════
+
+let view   = { x: 0, y: 0, w: 1000, h: 1000 };   // what is on screen now
+let target = view;                               // where the camera is heading
+let intro  = null;                               // zoom-in at the start of a level
+let showAbbr = true;                             // room for state initials above the circles
+
+function applyView(v) {
+  view = v;
+  svg.setAttribute('viewBox', v.x + ' ' + v.y + ' ' + v.w + ' ' + v.h);
+}
+
+// Fit the level's area between the top bar and the hint, and derive the
+// scales from it. Called at the start of a level and whenever the window resizes.
+function layout() {
+  const w = wrapEl.clientWidth || 1, h = wrapEl.clientHeight || 1;
+  const b = LV.box;
+  const top = demo ? 30 : 92, bot = demo ? 30 : 50, side = Math.min(36, w * 0.05);
+  const s = Math.max(0.01, Math.min((w - 2 * side) / b.w, (h - top - bot) / b.h));   // px per map unit
+  PXU = s;
+  target = {
+    w: w / s, h: h / s,
+    x: b.x + b.w / 2 - w / (2 * s),
+    y: b.y + b.h / 2 - (top + (h - top - bot) / 2) / s
+  };
+  // Rules scale with the area in play; drawing aims for circles ~13px in
+  // radius, but never so big that neighbouring states' circles and numbers
+  // collide. Where it gets that tight, the state initials are left out.
+  const base = Math.max(b.w, b.h) / 900;
+  const want = 13 / (7 * s);
+  showAbbr = want <= LV.minDist / 36;
+  setScale(base, Math.max(base * 0.6, Math.min(want, LV.minDist / 26)));
+  $('india-shadow').setAttribute('transform', 'translate(0 ' + (6 * SC).toFixed(2) + ')');
+}
+
+function startIntro() {
+  const t = target, k = 1.7;
+  intro = {
+    t: 0, dur: 1100,
+    from: { x: t.x - t.w * (k - 1) / 2, y: t.y - t.h * (k - 1) / 2, w: t.w * k, h: t.h * k }
+  };
+  applyView(intro.from);
+}
+
+function stepIntro(dt) {
+  intro.t += dt;
+  const p = Math.min(1, intro.t / intro.dur);
+  const e = 1 - Math.pow(1 - p, 3);                 // ease-out
+  const a = intro.from, b = target;
+  applyView({
+    x: a.x + (b.x - a.x) * e, y: a.y + (b.y - a.y) * e,
+    w: a.w + (b.w - a.w) * e, h: a.h + (b.h - a.h) * e
+  });
+  if (p >= 1) intro = null;
+}
+
+function onResize() {
+  if (!LV.box) return;
+  layout();
+  intro = null;
+  applyView(target);
+  buildLabels();
+  renderAll();
 }
 
 // ══════════════════════════════════════════════════════
@@ -776,23 +1360,33 @@ async function loadMap() {
 // ══════════════════════════════════════════════════════
 
 function initGame() {
-  T        = {};
-  units = []; emitters = []; puffs = [];
+  T = {};
+  units = []; emitters = []; puffs = []; rings = []; floaters = [];
+  bumps = {}; threat = new Set();
   dirty = true;
+  clock = lastGrow = growTick = lastThreat = 0;
+  nextAI = {};
+  SIDES.forEach(s => { nextAI[s] = LV.think * (0.6 + Math.random() * 0.6); });
+  stats = { captured: 0, lost: 0, peak: 0 };
   hideArrow();
   dragSrc = dragTgt = selState = null;
+  setDanger(false);
 
-  Object.keys(CX).forEach(name => {
+  LV.states.forEach(name => {
     let owner = 'neutral';
-    if (BLUE_START.includes(name))  owner = 'blue';
-    if (RED_START.includes(name))   owner = 'red';
-    if (GREEN_START.includes(name)) owner = 'green';
-    T[name] = {
-      owner,
-      troops: owner === 'neutral' ? 3 + Math.floor(Math.random() * 7) : 12
-    };
+    SIDES.forEach(s => { if (LV.start[s] && LV.start[s].includes(name)) owner = s; });
+    T[name] = { owner, troops: owner === 'neutral' ? LV.neutral : LV.troops };
   });
 
+  // States outside this level are part of the backdrop
+  Object.keys(NAME2ID).forEach(nm => {
+    if (T[nm]) return;
+    const el = document.getElementById(NAME2ID[nm]);
+    el.setAttribute('class', 'out');
+    el.removeAttribute('fill');
+  });
+
+  layout();
   buildLabels();
   renderAll();
   updatePB();
@@ -805,10 +1399,10 @@ function buildLabels() {
   Object.keys(elI).forEach(k => delete elI[k]);
   Object.keys(elN).forEach(k => delete elN[k]);
 
-  Object.keys(CX).forEach(name => {
+  Object.keys(T).forEach(name => {
     const [cx, cy] = CX[name];
 
-    const node = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    const node = document.createElementNS(SVGNS, 'circle');
     node.setAttribute('cx', cx);
     node.setAttribute('cy', cy);
     node.setAttribute('r', NODE_R);
@@ -816,21 +1410,22 @@ function buildLabels() {
     lblayer.appendChild(node);
     elN[name] = node;
 
-    lblayer.appendChild(mkTxt(cx, cy - NODE_R - 5, 'abbr', SHORT[name] || name.slice(0, 4)));
+    if (showAbbr) lblayer.appendChild(mkTxt(cx, cy - NODE_R - 5 * VS, 'abbr', SHORT[name] || name.slice(0, 4)));
 
-    const icon = mkTxt(cx, cy + 0.5, 'icn', '');
+    const icon = document.createElementNS(SVGNS, 'path');
+    icon.setAttribute('class', 'emb');
     icon.setAttribute('display', 'none');
     lblayer.appendChild(icon);
     elI[name] = icon;
 
-    const tc = mkTxt(cx, cy + NODE_R + 7, 'tnum', '');
+    const tc = mkTxt(cx, cy + NODE_R + 7.5 * VS, 'tnum', '');
     lblayer.appendChild(tc);
     elT[name] = tc;
   });
 }
 
 function mkTxt(x, y, cls, txt) {
-  const el = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  const el = document.createElementNS(SVGNS, 'text');
   el.setAttribute('x', x);
   el.setAttribute('y', y);
   el.setAttribute('class', cls);
@@ -842,10 +1437,15 @@ function mkTxt(x, y, cls, txt) {
 //  RENDER
 // ══════════════════════════════════════════════════════
 
+function placeEmblem(nm, owner, k) {
+  const [cx, cy] = CX[nm];
+  elI[nm].setAttribute('transform',
+    'translate(' + cx + ' ' + cy + ') scale(' + (NODE_R * EMBLEM[owner].k * k).toFixed(3) + ')');
+}
+
 function renderAll() {
   Object.entries(T).forEach(([nm, t]) => {
-    const sid = NAME2ID[nm];
-    const el  = sid ? document.getElementById(sid) : null;
+    const el = document.getElementById(NAME2ID[nm]);
     if (el) {
       el.setAttribute('fill', shade(t.owner, t.troops));
       let cls = 'state';
@@ -869,9 +1469,19 @@ function renderAll() {
     if (elT[nm]) elT[nm].textContent = Math.floor(t.troops);
 
     const ic = elI[nm];
-    if (ic) {
-      ic.textContent = EMBLEM[t.owner] || '';
-      ic.setAttribute('display', t.owner === 'neutral' ? 'none' : '');
+    if (ic && ic.getAttribute('data-o') !== t.owner) {
+      ic.setAttribute('data-o', t.owner);
+      if (t.owner === 'neutral') {
+        ic.setAttribute('display', 'none');
+      } else {
+        const e = EMBLEM[t.owner];
+        ic.setAttribute('d', e.d);
+        ic.setAttribute('fill', e.line ? 'none' : EC[t.owner]);
+        ic.setAttribute('stroke', e.line ? EC[t.owner] : 'none');
+        ic.setAttribute('stroke-width', e.line ? '.17' : '0');
+        ic.removeAttribute('display');
+        placeEmblem(nm, t.owner, 1);
+      }
     }
   });
 }
@@ -883,11 +1493,12 @@ function updatePB() {
   units.forEach(u => { if (!u.dead) c[u.owner]++; });
   const total = c.blue + c.red + c.green + c.neutral || 1;
   ['blue','red','green','neutral'].forEach(o => {
-    const pid = o === 'neutral' ? 'pb-gray' : 'pb-' + o;
-    const el  = document.getElementById(pid);
+    const el = $(o === 'neutral' ? 'pb-gray' : 'pb-' + o);
     if (!el) return;
-    el.style.width   = (c[o] / total * 100).toFixed(1) + '%';
+    const share = c[o] / total;
+    el.style.width   = (share * 100).toFixed(1) + '%';
     el.style.display = c[o] > 0 ? '' : 'none';
+    if (el.firstChild) el.firstChild.style.visibility = share > 0.09 ? '' : 'hidden';
   });
 }
 
@@ -932,7 +1543,7 @@ function stepEmitters(dt) {
           owner: e.owner, to: e.to,
           x1: e.x1, y1: e.y1, dx: e.dx, dy: e.dy, len: e.len,
           s: e.acc * WORLD_SPEED,
-          lat: (i - (n - 1) / 2) * UNIT_GAP + (Math.random() - 0.5),
+          lat: (i - (n - 1) / 2) * UNIT_GAP + (Math.random() - 0.5) * SC,
           x: e.x1, y: e.y1, dead: false
         });
       }
@@ -961,7 +1572,7 @@ function stepUnits(dt) {
 
 // Enemy units that meet on the way cancel each other out, one for one
 function collide() {
-  const CELL = HIT_R + 1;
+  const CELL = HIT_R * 1.25;
   const R2   = HIT_R * HIT_R;
   const grid = new Map();
   for (const u of units) {
@@ -970,7 +1581,7 @@ function collide() {
     let hit = null;
     for (let ox = -1; ox <= 1 && !hit; ox++) {
       for (let oy = -1; oy <= 1 && !hit; oy++) {
-        const cell = grid.get((gx + ox) * 4096 + gy + oy);
+        const cell = grid.get((gx + ox) * 8192 + gy + oy);
         if (!cell) continue;
         for (const v of cell) {
           if (v.dead || v.owner === u.owner) continue;
@@ -982,86 +1593,179 @@ function collide() {
     if (hit) {
       u.dead = hit.dead = true;
       puff((u.x + hit.x) / 2, (u.y + hit.y) / 2);
+      if (u.owner === 'blue' || hit.owner === 'blue') SFX.play('pop');
       dirty = true;
       continue;
     }
-    const key  = gx * 4096 + gy;
+    const key  = gx * 8192 + gy;
     const cell = grid.get(key);
     if (cell) cell.push(u); else grid.set(key, [u]);
   }
 }
 
-// ── Smoke ─────────────────────────────────────────────
+// ── Smoke, ripples, callouts, bounces ─────────────────
 
 function puff(x, y) {
   if (puffs.length >= 250) return;
   const blobs = [];
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 4; i++) {
     const a = Math.random() * Math.PI * 2;
-    blobs.push([Math.cos(a) * 3, Math.sin(a) * 3, 2 + Math.random() * 1.5]);
+    blobs.push([Math.cos(a) * 3.2, Math.sin(a) * 3.2, 2 + Math.random() * 1.8]);
   }
   puffs.push({ x, y, t: 0, blobs });
 }
 
-function stepPuffs(dt) {
-  for (const p of puffs) p.t += dt / 1000;
+function ripple(name, color) {
+  const [x, y] = CX[name];
+  rings.push({ x, y, color, t: 0 }, { x, y, color, t: -0.16 });
+}
+
+function callout(name, text, color) {
+  const [x, y] = CX[name];
+  floaters.push({ x, y: y - NODE_R * 2.4, text, color, t: 0 });
+}
+
+// Make a state's centre circle bounce: `amp` extra size, over `dur` seconds
+function bump(name, amp, dur) {
+  const b = bumps[name];
+  if (b && b.amp > amp && b.t < b.dur) return;
+  if (b && b.amp === amp && b.t < b.dur * 0.6) return;   // let a bounce play before repeating it
+  bumps[name] = { t: 0, amp, dur };
+}
+
+function stepFx(dt) {
+  const s = dt / 1000;
+  for (const p of puffs) p.t += s;
   puffs = puffs.filter(p => p.t < PUFF_LIFE);
+  for (const r of rings) r.t += s;
+  rings = rings.filter(r => r.t < 0.7);
+  for (const f of floaters) f.t += s;
+  floaters = floaters.filter(f => f.t < 1.5);
+
+  for (const nm in bumps) {
+    const b = bumps[nm], node = elN[nm];
+    b.t += s;
+    const done = b.t >= b.dur || !node || !T[nm];
+    const k = done ? 1 : 1 + b.amp * Math.sin(Math.PI * b.t / b.dur);
+    if (node) {
+      node.setAttribute('r', (NODE_R * k).toFixed(3));
+      if (T[nm] && T[nm].owner !== 'neutral') placeEmblem(nm, T[nm].owner, k);
+    }
+    if (done) delete bumps[nm];
+  }
+}
+
+// Which of our states have enemy troops marching on them
+function findThreats() {
+  const s = new Set();
+  const see = (to, owner) => { if (owner !== 'blue' && T[to] && T[to].owner === 'blue') s.add(to); };
+  for (const u of units) see(u.to, u.owner);
+  for (const e of emitters) see(e.to, e.owner);
+  threat = s;
 }
 
 // ── Drawing (canvas laid exactly over the SVG map) ────
 
+let CT = { s: 1, ox: 0, oy: 0, dpr: 1 };   // map units → canvas pixels
+
 function syncCanvas() {
-  const r   = svg.getBoundingClientRect();
-  const w   = wrapEl.getBoundingClientRect();
+  const r   = wrapEl.getBoundingClientRect();
   const dpr = window.devicePixelRatio || 1;
-  const key = [r.left - w.left, r.top - w.top, r.width, r.height, dpr].join(',');
-  if (key !== fxKey) {
-    fxKey = key;
-    fx.width  = Math.max(1, Math.round(r.width  * dpr));
-    fx.height = Math.max(1, Math.round(r.height * dpr));
-    fx.style.left   = (r.left - w.left) + 'px';
-    fx.style.top    = (r.top  - w.top)  + 'px';
-    fx.style.width  = r.width  + 'px';
-    fx.style.height = r.height + 'px';
-  }
-  // SVG user units → canvas pixels
+  const cw  = Math.max(1, Math.round(r.width * dpr)), ch = Math.max(1, Math.round(r.height * dpr));
+  if (fx.width !== cw || fx.height !== ch) { fx.width = cw; fx.height = ch; }
   const m = svg.getScreenCTM();
-  ctx.setTransform(m.a * dpr, 0, 0, m.d * dpr, (m.e - r.left) * dpr, (m.f - r.top) * dpr);
+  CT = { s: m.a * dpr, ox: (m.e - r.left) * dpr, oy: (m.f - r.top) * dpr, dpr };
 }
 
 function drawFx() {
+  syncCanvas();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, fx.width, fx.height);
-  syncCanvas();
+  ctx.setTransform(CT.s, 0, 0, CT.s, CT.ox, CT.oy);
 
   const TAU = Math.PI * 2;
-  const dots = (r, pick) => {
+
+  // Pulsing red ring around each of our states that is about to be hit
+  if (threat.size && !demo) {
+    const k = 0.5 + 0.5 * Math.sin(performance.now() / 140);
+    ctx.strokeStyle = 'rgba(232,53,43,' + (0.35 + 0.5 * k).toFixed(2) + ')';
+    ctx.lineWidth = 2.2 * VS;
+    ctx.beginPath();
+    threat.forEach(nm => {
+      const [x, y] = CX[nm], r = NODE_R * (1.45 + 0.3 * k);
+      ctx.moveTo(x + r, y);
+      ctx.arc(x, y, r, 0, TAU);
+    });
+    ctx.stroke();
+  }
+
+  // Ripples where a state changed hands
+  for (const r of rings) {
+    if (r.t < 0) continue;
+    const k = r.t / 0.7;
+    ctx.globalAlpha = (1 - k) * 0.85;
+    ctx.strokeStyle = r.color;
+    ctx.lineWidth = 3 * VS * (1 - k * 0.6);
+    ctx.beginPath();
+    ctx.arc(r.x, r.y, NODE_R * (1.1 + k * 3.6), 0, TAU);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  SIDES.forEach(o => {
+    ctx.fillStyle = UC[o];
     ctx.beginPath();
     for (const u of units) {
-      if (pick && u.owner !== pick) continue;
-      ctx.moveTo(u.x + r, u.y);
-      ctx.arc(u.x, u.y, r, 0, TAU);
+      if (u.owner !== o) continue;
+      ctx.moveTo(u.x + UNIT_R, u.y);
+      ctx.arc(u.x, u.y, UNIT_R, 0, TAU);
     }
     ctx.fill();
-  };
-  ['blue', 'red', 'green'].forEach(o => { ctx.fillStyle = UC[o]; dots(UNIT_R, o); });
+  });
 
-  ctx.fillStyle = '#ffffff';
+  // Soft smoke where enemy troops met
+  ctx.fillStyle = '#fbfbfb';
   for (const p of puffs) {
     const k = p.t / PUFF_LIFE;
-    ctx.globalAlpha = (1 - k) * 0.75;
+    ctx.globalAlpha = (1 - k) * (1 - k) * 0.6;
     ctx.beginPath();
     for (const [ox, oy, r] of p.blobs) {
-      const bx = p.x + ox * (0.3 + k), by = p.y + oy * (0.3 + k) - k * 3;
-      const br = r * (0.6 + k * 1.4);
+      const bx = p.x + ox * (0.3 + k * 1.2) * SC, by = p.y + (oy * (0.3 + k * 1.2) - k * 4) * SC;
+      const br = r * (0.7 + k * 1.7) * SC;
       ctx.moveTo(bx + br, by);
       ctx.arc(bx, by, br, 0, TAU);
     }
     ctx.fill();
   }
   ctx.globalAlpha = 1;
-}
 
+  // Callouts, drawn in screen pixels so the text is always crisp
+  if (floaters.length) {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    const d = CT.dpr;
+    ctx.font = '700 ' + Math.round(16 * d) + "px Fredoka, 'Arial Rounded MT Bold', system-ui, sans-serif";
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 4.5 * d;
+    ctx.strokeStyle = '#ffffff';
+    for (const f of floaters) {
+      const k = f.t / 1.5;
+      const grow = Math.min(1, f.t / 0.12);
+      ctx.globalAlpha = k < 0.7 ? 1 : (1 - k) / 0.3;
+      const px = f.x * CT.s + CT.ox;
+      const py = f.y * CT.s + CT.oy - (10 + 26 * k) * d;
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.scale(0.6 + 0.4 * grow, 0.6 + 0.4 * grow);
+      ctx.strokeText(f.text, 0, 0);
+      ctx.fillStyle = f.color;
+      ctx.fillText(f.text, 0, 0);
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+  }
+}
 
 // ══════════════════════════════════════════════════════
 //  COMBAT
@@ -1074,71 +1778,150 @@ function arrive(to, owner) {
     tgt.troops += 1;
   } else if (tgt.troops >= 1) {
     tgt.troops -= 1;
+    bump(to, 0.16, 0.2);
+    if (owner === 'blue' || tgt.owner === 'blue') SFX.play('hit');
   } else {
+    const prev = tgt.owner;
     tgt.owner  = owner;
     tgt.troops = 1;
-    // A captured state is no longer ours to command
-    if (selState === to) selState = null;
-    if (dragSrc === to) { dragSrc = dragTgt = null; hideArrow(); }
+    captured(to, owner, prev);
   }
   dirty = true;
+}
+
+function captured(name, owner, prev) {
+  // A captured state is no longer ours to command
+  if (selState === name) selState = null;
+  if (dragSrc === name) { dragSrc = dragTgt = null; hideArrow(); }
+
+  bumps[name] = { t: 0, amp: 0.45, dur: 0.42 };
+  ripple(name, OC[owner]);
+  if (demo) return;
+
+  if (owner === 'blue') {
+    stats.captured++;
+    callout(name, name + (prev === 'neutral' ? ' captured!' : ' liberated!'), OC.blue);
+    SFX.play('capture');
+    buzz(25);
+  } else if (prev === 'blue') {
+    stats.lost++;
+    callout(name, name + ' lost!', OC.red);
+    SFX.play('lost');
+    buzz([30, 40, 30]);
+  }
 }
 
 // ══════════════════════════════════════════════════════
 //  WIN / LOSE
 // ══════════════════════════════════════════════════════
 
-function checkWin() {
-  const c = { blue:0, red:0, green:0, neutral:0 };
-  Object.values(T).forEach(t => c[t.owner]++);
-  // Troops still on the march keep a side alive until they arrive
-  const alive = { blue:c.blue, red:c.red, green:c.green };
-  units.forEach(u => { if (!u.dead) alive[u.owner]++; });
-  if (alive.blue === 0) { endGame(false, 'Your territories have been conquered!'); return; }
-  if (alive.red === 0 && alive.green === 0) {
-    endGame(true, c.neutral === 0 ? 'You unified all of India!' : 'All rivals defeated — India is yours!');
+function setDanger(on) {
+  if (on === danger) return;
+  danger = on;
+  document.body.classList.toggle('danger', on);
+  if (on) {
+    SFX.play('warn');
+    showHint('Last state — hold the line!', 1);
+  } else {
+    showHint('', 0);
   }
 }
 
-function endGame(won, msg) {
+function checkWin() {
+  if (!running) return;
+  const states = { blue:0, red:0, green:0 };
+  let last = null;
+  Object.entries(T).forEach(([nm, t]) => {
+    if (t.owner === 'neutral') return;
+    states[t.owner]++;
+    if (t.owner === 'blue') last = nm;
+  });
+  // Troops still on the march keep a side alive until they arrive
+  const alive = Object.assign({}, states);
+  units.forEach(u => { if (!u.dead) alive[u.owner]++; });
+
+  if (demo) {
+    // The menu demo just starts over once it is decided
+    if (SIDES.filter(s => alive[s] > 0).length <= 1 || clock > 150000) startDemo();
+    return;
+  }
+
+  stats.peak = Math.max(stats.peak, states.blue);
+  setDanger(states.blue === 1 && (stats.peak >= 2 || threat.has(last)));
+
+  if (alive.blue === 0) endGame(false);
+  else if (LV.enemies.every(e => alive[e] === 0)) endGame(true);
+}
+
+function endGame(won) {
   running = false;
-  cancelAnimationFrame(raf);
-  document.getElementById('res-icon').textContent  = won ? '🏆' : '💀';
-  document.getElementById('res-title').textContent = won ? 'VICTORY!' : 'DEFEATED';
-  document.getElementById('res-title').className   = won ? 'win' : 'lose';
-  document.getElementById('res-msg').textContent   = msg;
-  document.getElementById('res-scr').style.display = 'flex';
+  clearDrag();
+  setDanger(false);
+  threat = new Set();
+  endTut(false);
+
+  const secs = Math.round(clock / 1000);
+  const stars = !won ? 0 : stats.lost === 0 ? 3 : stats.lost <= 2 ? 2 : 1;
+  let best = false;
+  if (won) {
+    save.stars[level] = Math.max(save.stars[level] || 0, stars);
+    best = !save.best[level] || secs < save.best[level];
+    if (best) save.best[level] = secs;
+    save.unlocked = Math.max(save.unlocked, Math.min(LEVELS.length, level + 2));
+    writeSave();
+    SFX.play('win');
+    buzz([40, 60, 40, 60, 120]);
+  } else {
+    SFX.play('lose');
+    buzz(200);
+  }
+
+  // Let the last capture play out before the result card covers it
+  const id = runId;
+  setTimeout(() => { if (id === runId) showResult(won, stars, secs, best); }, 900);
 }
 
 // ══════════════════════════════════════════════════════
 //  TROOP GENERATION
 // ══════════════════════════════════════════════════════
 
-function genTroops(now) {
-  if (now - lastTroop < 1000) return;
-  lastTroop = now;
-  Object.values(T).forEach(t => { if (t.owner !== 'neutral') t.troops += 1; });
-  dirty = true;
+function genTroops() {
+  while (clock - lastGrow >= GROW_MS) {
+    lastGrow += GROW_MS;
+    growTick++;
+    Object.values(T).forEach(t => {
+      if (t.owner === 'neutral') {
+        if (growTick % 2 === 0 && t.troops < LV.neutral) t.troops += 1;
+      } else if (t.troops < GROW_CAP) {
+        // On the easier levels the invaders recruit more slowly than we do
+        t.troops += (t.owner === 'blue' || demo) ? 1 : LV.recruit;
+      }
+    });
+    dirty = true;
+  }
 }
 
 // ══════════════════════════════════════════════════════
 //  AI  (no adjacency restriction — attacks best target anywhere)
 // ══════════════════════════════════════════════════════
 
-function runAI(now) {
-  if (now - lastAI < AI_INTERVAL) return;
-  lastAI = now;
-
-  ['red', 'green'].forEach(ai => aiTurn(ai, AI_MAX_SOURCES));
+function runAI() {
+  // In the menu demo the computer plays our side too
+  (demo ? SIDES.filter(s => LV.start[s]) : LV.enemies).forEach(ai => {
+    if (clock < nextAI[ai]) return;
+    // Each side keeps its own slightly irregular rhythm
+    nextAI[ai] = clock + LV.think * (0.7 + Math.random() * 0.6);
+    aiTurn(ai);
+  });
 }
 
-function aiTurn(ai, maxSources) {
+function aiTurn(ai) {
   // Owned territories with enough troops to attack and no march under way —
   // in random order, so the whole front stays active instead of one big army
   // doing all the work
   const marching = new Set(emitters.map(e => e.from));
   const mine = Object.entries(T)
-    .filter(([nm, t]) => t.owner === ai && t.troops > 10 && !marching.has(nm));
+    .filter(([nm, t]) => t.owner === ai && t.troops >= LV.army && !marching.has(nm));
   for (let i = mine.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [mine[i], mine[j]] = [mine[j], mine[i]];
@@ -1149,23 +1932,29 @@ function aiTurn(ai, maxSources) {
   units.forEach(u => { if (u.owner === ai) inbound[u.to] = (inbound[u.to] || 0) + 1; });
   emitters.forEach(e => { if (e.owner === ai) inbound[e.to] = (inbound[e.to] || 0) + e.left; });
 
+  // What a territory will hold by the time troops sent now get there:
+  // owned states keep growing (up to the cap) while the march is under way
+  const defence = (t, secs) => t.owner === 'neutral'
+    ? t.troops + 1
+    : Math.max(t.troops, Math.min(GROW_CAP, t.troops + secs * 1000 / GROW_MS));
+
   const used = new Set();
   for (const [src, sT] of mine) {
-    if (used.size >= maxSources) break;
+    if (used.size >= LV.sources) break;
     const send = Math.floor(sT.troops);
 
     // Score every non-owned territory — weaker and closer = higher score,
-    // with a bonus for hitting a rival over a neutral
+    // with a bonus for hitting a rival over a neutral, and a heavy penalty
+    // for marches longer than this level's reach
     let best = null;
     Object.entries(T).forEach(([nm, t]) => {
       if (t.owner === ai) return;
       const secs = flightLen(src, nm) / WORLD_SPEED;
-      // Owned states keep growing while our troops are on the march
-      const def  = t.troops + (t.owner === 'neutral' ? 0 : secs);
+      const def  = defence(t, secs);
       const need = def - (inbound[nm] || 0);
       if (need < 0) return;          // already being taken
       if (send < need + 2) return;   // don't suicide into a stronger territory
-      const sc = (t.owner === 'neutral' ? 40 : 55) - def - secs * 3;
+      const sc = (t.owner === 'neutral' ? 40 : LV.rival) - def - secs * 3 - Math.max(0, secs - LV.reach) * 8;
       if (!best || sc > best.sc) best = { name: nm, sc };
     });
 
@@ -1178,7 +1967,7 @@ function aiTurn(ai, maxSources) {
   // Now and then — and whenever no single state could win a fight — pool the
   // nearest states against a territory too strong for any one of them,
   // preferring the plan that commits the fewest states
-  if (used.size && Math.random() > AI_POOL_CHANCE) return;
+  if (used.size && Math.random() > LV.pool) return;
   const ready = mine.filter(([nm]) => !used.has(nm));
   if (ready.length < 2) return;
 
@@ -1191,11 +1980,11 @@ function aiTurn(ai, maxSources) {
     let sum = 0;
     for (let n = 0; n < srcs.length; n++) {
       sum += Math.floor(srcs[n].st.troops);
-      const need = t.troops + (t.owner === 'neutral' ? 0 : srcs[n].secs) - (inbound[nm] || 0);
+      const need = defence(t, srcs[n].secs) - (inbound[nm] || 0);
       if (need < 0) return;          // already being taken
       if (sum >= need * 1.15 + 3) {
         if (n === 0) return;         // one state is enough — not a pooling job
-        const sc = -(n + 1) * 10 - srcs[n].secs * 3;
+        const sc = -(n + 1) * 10 - srcs[n].secs * 3 - Math.max(0, srcs[n].secs - LV.reach) * 8;
         if (!plan || sc > plan.sc) plan = { name: nm, srcs: srcs.slice(0, n + 1), sc };
         return;
       }
@@ -1206,28 +1995,37 @@ function aiTurn(ai, maxSources) {
 }
 
 // ══════════════════════════════════════════════════════
-//  GAME LOOP
+//  GAME LOOP — runs all the time; the match only advances while it is live
 // ══════════════════════════════════════════════════════
 
 function loop(ts) {
-  if (!running) return;
-  const dt = Math.min(ts - lastTs, 60);
+  raf = requestAnimationFrame(loop);
+  const real = Math.max(0, Math.min(ts - lastTs, 60));
   lastTs = ts;
-  genTroops(ts); runAI(ts);
-  // Small sub-steps so fast-closing columns can't pass through each other
-  for (let rem = dt; rem > 0; rem -= 20) {
-    const h = Math.min(rem, 20);
-    stepEmitters(h); stepUnits(h);
+
+  if (intro) stepIntro(real);
+  const dt = (running && !paused && !intro) ? real : 0;
+  if (dt) {
+    clock += dt;
+    genTroops(); runAI();
+    // Small sub-steps so fast-closing columns can't pass through each other
+    for (let rem = dt; rem > 0; rem -= 20) {
+      const h = Math.min(rem, 20);
+      stepEmitters(h); stepUnits(h);
+    }
+    if (clock - lastThreat >= 200) { lastThreat = clock; findThreats(); }
   }
-  stepPuffs(dt);
+  if (!paused) stepFx(real);
   if (dirty) { dirty = false; renderAll(); updatePB(); checkWin(); }
+  stepTut(paused ? 0 : real);
   drawFx();
-  if (running) raf = requestAnimationFrame(loop);
 }
 
 // ══════════════════════════════════════════════════════
 //  INPUT HELPERS
 // ══════════════════════════════════════════════════════
+
+const live = () => running && !demo && !paused && !intro;
 
 function svgPt(e) {
   // touchend has an empty `touches` list — the lifted finger is in `changedTouches`
@@ -1258,25 +2056,30 @@ function nodeAt(pt) {
   return best;
 }
 
+// Place an arrow from the circle at (x1, y1) to the tip (tx, ty).
+// Returns false when the arrow is too short to draw.
+function setArrow(line, head, x1, y1, tx, ty) {
+  const len = Math.hypot(tx - x1, ty - y1);
+  const HEAD = 11 * VS, HALF = 6.5 * VS;
+  if (len < NODE_R + HEAD) return false;
+  const ux = (tx - x1) / len, uy = (ty - y1) / len;
+  const bx = tx - ux * HEAD,  by = ty - uy * HEAD;     // base of the head
+  line.setAttribute('x1', x1 + ux * NODE_R);
+  line.setAttribute('y1', y1 + uy * NODE_R);
+  line.setAttribute('x2', bx);
+  line.setAttribute('y2', by);
+  head.setAttribute('points',
+    tx + ',' + ty + ' ' +
+    (bx - uy * HALF) + ',' + (by + ux * HALF) + ' ' +
+    (bx + uy * HALF) + ',' + (by - ux * HALF));
+  return true;
+}
+
 // Draw the aiming arrow from the dragged state's circle out to the pointer —
 // exactly as far as it has been dragged, never snapping to anything
 function showArrow(pt) {
   const [x1, y1] = CX[dragSrc];
-  const tx = pt.x, ty = pt.y;                          // tip
-  const len = Math.hypot(tx - x1, ty - y1);
-  const HEAD = 11, HALF = 6.5;
-  if (len < NODE_R + HEAD) { hideArrow(); return; }
-  const ux = (tx - x1) / len, uy = (ty - y1) / len;
-  const bx = tx - ux * HEAD,  by = ty - uy * HEAD;     // base of the head
-  arrowLine.setAttribute('x1', x1 + ux * NODE_R);
-  arrowLine.setAttribute('y1', y1 + uy * NODE_R);
-  arrowLine.setAttribute('x2', bx);
-  arrowLine.setAttribute('y2', by);
-  arrowHead.setAttribute('points',
-    tx + ',' + ty + ' ' +
-    (bx - uy * HALF) + ',' + (by + ux * HALF) + ' ' +
-    (bx + uy * HALF) + ',' + (by - ux * HALF));
-  arrowEl.style.display = '';
+  arrowEl.style.display = setArrow(arrowLine, arrowHead, x1, y1, pt.x, pt.y) ? '' : 'none';
 }
 
 function hideArrow() {
@@ -1295,7 +2098,10 @@ function sendTroops(from, to) {
   const sT = T[from];
   if (!sT || sT.owner !== 'blue') return;
   if (sT.troops < 1) { flash('No troops to send!'); return; }
-  launch(from, to, 'blue');
+  if (launch(from, to, 'blue')) {
+    SFX.play('send');
+    endTut(true);
+  }
   renderAll();
 }
 
@@ -1306,10 +2112,10 @@ function sendTroops(from, to) {
 // next tap on any territory is then the target.
 
 function onDown(e) {
-  if (!running) return;
+  if (!live()) return;
   e.preventDefault();
   const pt = svgPt(e);
-  const nm = nameAt(pt);
+  const nm = nameAt(pt) || nodeAt(pt);
 
   if (!nm || T[nm].owner !== 'blue') {
     // Tap on a target (or empty space) while a state is selected
@@ -1324,8 +2130,6 @@ function onDown(e) {
   dragSrc = nm;
   showArrow(pt);
   renderAll();
-
-  hintEl.style.opacity = '0';
 }
 
 function onMove(e) {
@@ -1349,11 +2153,11 @@ function onUp(e) {
   dragSrc = dragTgt = null;
   hideArrow();
 
-  if (running) {
+  if (live()) {
     if (tgt && tgt !== src) {
       sendTroops(src, tgt);
       selState = null;
-    } else if (nameAt(pt) === src) {
+    } else if (tgt === src || nameAt(pt) === src) {
       // Tap on one of our own states
       if (selState && selState !== src) {
         sendTroops(selState, src);   // reinforce
@@ -1376,40 +2180,279 @@ svg.addEventListener('touchend',    onUp,   { passive:false });
 svg.addEventListener('touchcancel', clearDrag);
 
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && selState) { selState = null; renderAll(); }
+  if (e.key === 'Escape' && selState) { selState = null; renderAll(); return; }
+  if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') {
+    if (paused) resume(); else pause();
+  } else if (e.key === 'm' || e.key === 'M') {
+    setMuted(!save.muted);
+  }
 });
 
-// ── Hint flash ────────────────────────────────────────
+// ── Hint pill ─────────────────────────────────────────
 
-let hintTmr = null;
+let hintTmr = null, hintBase = '', hintBaseOp = 0;
+
+// Set the standing hint (empty text = none)
+function showHint(text, opacity) {
+  hintBase = text; hintBaseOp = opacity;
+  clearTimeout(hintTmr);
+  if (text) hintEl.textContent = text;
+  hintEl.style.opacity = opacity;
+}
+
+// Show a message for a moment, then fall back to the standing hint
 function flash(msg) {
   hintEl.textContent = msg; hintEl.style.opacity = '1';
   clearTimeout(hintTmr);
   hintTmr = setTimeout(() => {
-    hintEl.textContent  = 'Drag from your blue state to send all troops';
-    hintEl.style.opacity = '0.5';
+    if (hintBase) hintEl.textContent = hintBase;
+    hintEl.style.opacity = hintBaseOp;
   }, 2200);
 }
 
-// ══════════════════════════════════════════════════════
-//  START / RESTART
-// ══════════════════════════════════════════════════════
+// ── First-level tutorial: a ghost finger drags an arrow to a neighbour ──
 
-function startGame() {
-  document.getElementById('start-scr').style.display = 'none';
-  document.getElementById('res-scr').style.display   = 'none';
-  hintEl.style.opacity = '0.5';
-  hintEl.textContent   = 'Drag from your blue state to send all troops';
+const tutEl = $('tut'), tutLine = $('tut-line'), tutHead = $('tut-head'),
+      tutDot = $('tut-dot'), tutRing = $('tut-ring');
+let tut = null;
 
-  cancelAnimationFrame(raf);
-  initGame();
-  running = true;
-  lastTs = lastTroop = lastAI = performance.now();
-  raf = requestAnimationFrame(loop);
+function startTut() {
+  tut = null;
+  tutEl.style.display = 'none';
+  if (level !== 0 || save.tut) return;
+  const from = LV.start.blue[0];
+  let to = null;
+  Object.keys(T).forEach(nm => {
+    if (T[nm].owner !== 'neutral') return;
+    if (!to || flightLen(from, nm) < flightLen(from, to)) to = nm;
+  });
+  if (!to) return;
+  tut = { from, to, t: 0 };
+  showHint('Drag from your circle to a grey circle', 1);
 }
 
-document.getElementById('start-btn').addEventListener('click',   startGame);
-document.getElementById('restart-btn').addEventListener('click', startGame);
+function endTut(done) {
+  if (!tut) return;
+  tut = null;
+  tutEl.style.display = 'none';
+  if (done) {
+    save.tut = true;
+    writeSave();
+    showHint('Send more troops than a state holds to capture it', 1);
+    const id = runId;
+    setTimeout(() => { if (id === runId && !danger) showHint('', 0); }, 6000);
+  }
+}
+
+function stepTut(dt) {
+  if (!tut) return;
+  // Stay out of the way while the player is aiming, and until the camera settles
+  if (dragSrc || intro || !running || T[tut.from].owner !== 'blue') { tutEl.style.display = 'none'; tut.t = 0; return; }
+  const CYCLE = 2.3;
+  tut.t = (tut.t + dt / 1000) % CYCLE;
+  const t = tut.t;
+  if (t > 1.9) { tutEl.style.display = 'none'; return; }
+
+  const [x1, y1] = CX[tut.from], [x2, y2] = CX[tut.to];
+  // 0–0.35s press, 0.35–1.45s drag, then hold on the target
+  const p = Math.max(0, Math.min(1, (t - 0.35) / 1.1));
+  const e = p * p * (3 - 2 * p);
+  const x = x1 + (x2 - x1) * e, y = y1 + (y2 - y1) * e;
+
+  const shown = setArrow(tutLine, tutHead, x1, y1, x, y);
+  tutLine.style.display = tutHead.style.display = shown ? '' : 'none';
+  // Finger sits just below the arrow tip so it does not hide it
+  const fy = y + NODE_R * 0.9;
+  tutDot.setAttribute('cx', x);  tutDot.setAttribute('cy', fy);
+  tutDot.setAttribute('r', NODE_R * 0.62);
+  const press = t < 0.35 ? t / 0.35 : t > 1.45 ? (t - 1.45) / 0.45 : 1;
+  tutRing.setAttribute('cx', x); tutRing.setAttribute('cy', fy);
+  tutRing.setAttribute('r', NODE_R * (t < 0.35 ? 1.9 - 1.1 * press : t > 1.45 ? 0.8 + 1.1 * press : 0.8));
+  tutRing.style.opacity = t < 0.35 ? press : t > 1.45 ? 1 - press : 0;
+  tutEl.style.opacity = t > 1.7 ? (1.9 - t) / 0.2 : 1;
+  tutEl.style.display = '';
+}
+
+// ══════════════════════════════════════════════════════
+//  SCREENS
+// ══════════════════════════════════════════════════════
+
+const SCREENS = ['start-scr', 'lv-scr', 'pause-scr', 'res-scr'];
+function show(id) {
+  SCREENS.forEach(s => { $(s).style.display = s === id ? 'flex' : 'none'; });
+}
+
+let lvFrom = 'start-scr';   // the screen "Back" returns to from level select
+
+function buildMenus() {
+  $('legend').innerHTML =
+    SIDES.map(s => '<div class="li">' + emblemSvg(s, 18) + SIDE_NAME[s] + '</div>').join('') +
+    '<div class="li"><div class="ldot"></div>Neutral</div>';
+  SIDES.forEach(s => { $('pb-' + s).innerHTML = emblemSvg(s, 16); });
+  setMuted(save.muted);
+}
+
+// A small map of India with the level's states coloured in
+function miniMap(lv) {
+  let s = '<svg class="mini" viewBox="70 20 860 960">' +
+          '<use href="#india-src" fill="#e6e1d6" stroke="#f6f3ec" stroke-width="3"/>';
+  lv.states.forEach(nm => {
+    let col = OC.neutral;
+    SIDES.forEach(side => { if (lv.start[side] && lv.start[side].includes(nm)) col = OC[side]; });
+    s += '<use href="#mp-' + slug(nm) + '" fill="' + col + '" stroke="#fff" stroke-width="3"/>';
+  });
+  return s + '</svg>';
+}
+
+function buildLevelGrid() {
+  const grid = $('lv-grid');
+  grid.innerHTML = '';
+  LEVELS.forEach((lv, i) => {
+    const open = i < save.unlocked;
+    const b = document.createElement('button');
+    b.className = 'lv' + (open ? '' : ' locked');
+    let stars = '';
+    for (let k = 1; k <= 3; k++) {
+      stars += '<svg viewBox="0 0 24 24"' + ((save.stars[i] || 0) >= k ? ' class="on"' : '') + '>' + STAR_SVG + '</svg>';
+    }
+    b.innerHTML = miniMap(lv) +
+      '<div class="num">' + (i + 1) + '</div>' +
+      '<div class="lock"><svg viewBox="0 0 24 24">' + LOCK_SVG + '</svg></div>' +
+      '<div class="nm">' + lv.name + '</div>' +
+      '<div class="st">' + stars + '</div>';
+    if (open) b.addEventListener('click', () => { SFX.play('click'); startLevel(i); });
+    grid.appendChild(b);
+  });
+}
+
+function showLevels(from) {
+  lvFrom = from;
+  buildLevelGrid();
+  show('lv-scr');
+}
+
+function showStart() {
+  document.body.classList.remove('ingame');
+  $('start-btn').textContent = save.unlocked > 1 || save.stars[0] ? 'Continue' : 'Play';
+  show('start-scr');
+  startDemo();
+}
+
+// The match that plays itself behind the menus
+function startDemo() {
+  runId++;
+  demo = true; paused = false; intro = null;
+  level = LEVELS.length - 1;
+  LV = LEVELS[level];
+  tut = null; tutEl.style.display = 'none';
+  showHint('', 0);
+  initGame();
+  applyView(target);
+  running = true;
+}
+
+function startLevel(i) {
+  runId++;
+  demo = false; paused = false;
+  level = i;
+  LV = LEVELS[i];
+  show(null);
+  document.body.classList.add('ingame');
+  $('lvl-name').textContent = 'Level ' + (i + 1) + ' · ' + LV.name;
+  showHint('', 0);
+
+  initGame();
+  startIntro();
+  startTut();
+  running = true;
+
+  $('bn-1').textContent = 'LEVEL ' + (i + 1);
+  $('bn-2').textContent = LV.name;
+  $('bn-3').textContent = LV.blurb;
+  const bn = $('banner');
+  bn.classList.remove('show');
+  void bn.offsetWidth;            // restart the animation
+  bn.classList.add('show');
+}
+
+function pause() {
+  if (demo || paused || !running) return;
+  paused = true;
+  clearDrag();
+  show('pause-scr');
+}
+
+function resume() {
+  if (!paused) return;
+  paused = false;
+  show(null);
+}
+
+function fmtTime(secs) {
+  return Math.floor(secs / 60) + ':' + String(secs % 60).padStart(2, '0');
+}
+
+function showResult(won, stars, secs, best) {
+  const lastLevel = level === LEVELS.length - 1;
+  const rib = $('res-ribbon');
+  rib.textContent = !won ? 'Territory lost' : lastLevel ? 'Bharat is safe!' : 'Territory secured!';
+  rib.className = 'ribbon' + (won ? '' : ' lose');
+
+  const st = $('res-stars');
+  st.style.display = won ? '' : 'none';
+  st.innerHTML = '';
+  for (let k = 1; k <= 3; k++) {
+    st.innerHTML += '<svg viewBox="0 0 24 24"' + (stars >= k ? ' class="on"' : '') + '>' + STAR_SVG + '</svg>';
+  }
+  if (won) {
+    const id = runId;
+    for (let k = 0; k < stars; k++) {
+      setTimeout(() => { if (id === runId) SFX.play('star'); }, 950 + k * 180);
+    }
+  }
+
+  $('res-msg').textContent = !won
+    ? 'The invaders hold ' + LV.name + '. Regroup and strike back.'
+    : (stars === 3 ? 'Flawless — not a single state lost.'
+       : 'Win without losing a state to earn three stars.') +
+      (best ? ' New best time!' : '');
+  $('rs-time').textContent = fmtTime(secs);
+  $('rs-cap').textContent  = stats.captured;
+  $('rs-lost').textContent = stats.lost;
+
+  const next = $('next-btn');
+  next.textContent = !won ? 'Try again' : lastLevel ? 'All levels' : 'Next level';
+  next.onclick = () => {
+    SFX.play('click');
+    if (!won) startLevel(level);
+    else if (lastLevel) showLevels('res-scr');
+    else startLevel(level + 1);
+  };
+  $('retry-btn').style.display = won ? '' : 'none';
+  show('res-scr');
+}
+
+const onClick = (id, fn) => $(id).addEventListener('click', () => { SFX.play('click'); fn(); });
+
+onClick('start-btn',  () => startLevel(Math.min(save.unlocked, LEVELS.length) - 1));
+onClick('levels-btn', () => showLevels('start-scr'));
+onClick('lv-back',    () => show(lvFrom));
+onClick('pause-btn',  pause);
+onClick('resume-btn', resume);
+onClick('p-restart',  () => startLevel(level));
+onClick('p-levels',   () => showLevels('pause-scr'));
+onClick('retry-btn',  () => startLevel(level));
+onClick('r-levels',   () => showLevels('res-scr'));
+$('mute-btn').addEventListener('click', () => { setMuted(!save.muted); SFX.play('click'); });
+$('p-sound').addEventListener('click',  () => { setMuted(!save.muted); SFX.play('click'); });
+
+// Audio may only start from a tap or click
+['pointerdown', 'touchstart', 'keydown'].forEach(ev =>
+  document.addEventListener(ev, SFX.unlock, { passive: true }));
+
+// Don't let the match run on unseen in a background tab
+document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+window.addEventListener('resize', onResize);
 
 // ══════════════════════════════════════════════════════
 //  BOOT
