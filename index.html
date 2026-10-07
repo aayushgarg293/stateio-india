@@ -1070,12 +1070,12 @@ let selState = null;
 let SC = 1, VS = 1, PXU = 1;
 let WORLD_SPEED, UNIT_R, UNIT_GAP, FUNNEL, HIT_R, NODE_R, NODE_HIT;
 const ROW_WIDTH = 4;                // dots per row
-const ROW_TIME  = 5.5 / 40;         // seconds between rows leaving a state
+const ROW_TIME  = 5.5 / 44;         // seconds between rows leaving a state
 const PUFF_LIFE = 0.7;              // seconds a smoke puff lasts
 
 function setScale(sc, vs) {
   SC = sc; VS = vs;
-  WORLD_SPEED = 40 * SC;                        // map units per second
+  WORLD_SPEED = 44 * SC;                        // map units per second
   UNIT_GAP    = WORLD_SPEED * ROW_TIME;         // spacing within and between rows
   FUNNEL      = 16 * SC;                        // distance over which a column fans out / closes in
   HIT_R       = 4.5 * SC;                       // enemy dots closer than this cancel out
