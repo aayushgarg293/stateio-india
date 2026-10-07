@@ -331,6 +331,14 @@ body.ingame #top-ui { display:flex; }
 .btn.sm.ghost { box-shadow:0 4px 0 #cfd5db; }
 .btn.ghost:active, .btn.sm.ghost:active { box-shadow:0 2px 0 #cfd5db; }
 .btn.block { display:block; width:100%; margin-bottom:14px; }
+#share-img {
+  display:block;
+  max-width:100%;
+  max-height:46vh;
+  margin:0 auto 18px;
+  border-radius:16px;
+  box-shadow:0 4px 0 rgba(0,0,0,0.13);
+}
 .btn.sm.gold { background:var(--gold); box-shadow:0 4px 0 var(--gold-d); }
 .btn.sm.gold:active { box-shadow:0 2px 0 var(--gold-d); }
 .btn.sm.warn { background:var(--red); color:#fff; box-shadow:0 4px 0 var(--red-d); }
@@ -631,6 +639,20 @@ body.danger #danger { animation:danger 1s ease-in-out infinite; }
       <button class="btn sm gold" id="share-btn">Share</button>
       <button class="btn sm ghost" id="retry-btn">Retry</button>
       <button class="btn sm ghost" id="r-levels">Levels</button>
+    </div>
+  </div>
+</div>
+
+<!-- SHARE -->
+<div class="overlay" id="share-scr" style="display:none">
+  <div class="card">
+    <h2>Share your victory</h2>
+    <img id="share-img" alt="Your winning map">
+    <button class="btn block" id="sh-save">Save image</button>
+    <div class="row">
+      <button class="btn sm gold" id="sh-send">Send to…</button>
+      <button class="btn sm ghost" id="sh-copy">Copy image</button>
+      <button class="btn sm ghost" id="sh-back">Back</button>
     </div>
   </div>
 </div>
@@ -2300,7 +2322,7 @@ function stepTut(dt) {
 //  SCREENS
 // ══════════════════════════════════════════════════════
 
-const SCREENS = ['start-scr', 'lv-scr', 'pause-scr', 'res-scr'];
+const SCREENS = ['start-scr', 'lv-scr', 'pause-scr', 'res-scr', 'share-scr'];
 function show(id) {
   SCREENS.forEach(s => { $(s).style.display = s === id ? 'flex' : 'none'; });
 }
@@ -2627,13 +2649,13 @@ function drawShareCard(stars, secs) {
   return c;
 }
 
-// Draw the card as soon as the result shows, so the Share tap can open the
-// share sheet straight away (browsers only allow that directly from a tap)
+// Draw the card as soon as the result shows, so the picture is ready the
+// moment Share is pressed
+let shareLink = null;
 function prepareShare(won, stars, secs) {
   const btn = $('share-btn');
   shareBlob = null;
   btn.style.display = 'none';
-  btn.textContent = 'Share';
   if (!won || typeof Path2D === 'undefined') return;
   try {
     const c = drawShareCard(stars, secs);
@@ -2645,34 +2667,63 @@ function prepareShare(won, stars, secs) {
       shareName = 'stateio-india-level-' + (level + 1) + '.png';
       shareText = 'I secured ' + LV.name + ' in ' + fmtTime(secs) + ' with ' + stars +
                   (stars === 1 ? ' star' : ' stars') + ' on Stateio India. Can you defend every state?';
+      if (shareLink) URL.revokeObjectURL(shareLink);
+      shareLink = URL.createObjectURL(blob);
+      $('share-img').src = shareLink;
       btn.style.display = '';
     }, 'image/png');
   } catch (e) { /* no share button if the picture cannot be made */ }
 }
 
-async function shareWin() {
+const shareFile = () => new File([shareBlob], shareName, { type: 'image/png' });
+
+// The share screen shows the picture and offers every way this device has
+// of getting it out: save it, hand it to another app, or copy it
+function openShare() {
   if (!shareBlob) return;
-  const btn = $('share-btn');
-  try {
-    const file = new File([shareBlob], shareName, { type: 'image/png' });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({ files: [file], title: 'Stateio India', text: shareText + ' ' + SHARE_URL });
-      return;
-    }
-  } catch (e) {
-    if (e && e.name === 'AbortError') return;      // the player closed the share sheet
-  }
-  // No share sheet on this device: save the picture instead
+  let canSend = false;
+  try { canSend = !!(navigator.canShare && navigator.canShare({ files: [shareFile()] })); } catch (e) { /* no */ }
+  $('sh-send').style.display = canSend ? '' : 'none';
+  $('sh-copy').style.display = (navigator.clipboard && window.ClipboardItem) ? '' : 'none';
+  show('share-scr');
+}
+
+// Change a button's label for a moment, then put it back
+function blip(id, msg) {
+  const b = $(id), was = b.getAttribute('data-label') || b.textContent;
+  b.setAttribute('data-label', was);
+  b.textContent = msg;
+  setTimeout(() => { b.textContent = was; }, 2000);
+}
+
+function saveShare() {
+  if (!shareBlob) return;
   const a = document.createElement('a');
-  const url = URL.createObjectURL(shareBlob);
-  a.href = url;
+  a.href = shareLink;
   a.download = shareName;
   document.body.appendChild(a);
   a.click();
   a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 10000);
-  btn.textContent = 'Saved!';
-  setTimeout(() => { btn.textContent = 'Share'; }, 2200);
+  blip('sh-save', 'Saved to downloads');
+}
+
+async function sendShare() {
+  if (!shareBlob) return;
+  try {
+    await navigator.share({ files: [shareFile()], title: 'Stateio India', text: shareText + ' ' + SHARE_URL });
+  } catch (e) {
+    if (!e || e.name !== 'AbortError') blip('sh-send', 'Could not send');   // AbortError = sheet closed
+  }
+}
+
+async function copyShare() {
+  if (!shareBlob) return;
+  try {
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': shareBlob })]);
+    blip('sh-copy', 'Copied!');
+  } catch (e) {
+    blip('sh-copy', 'Could not copy');
+  }
 }
 
 const onClick = (id, fn) => $(id).addEventListener('click', () => { SFX.play('click'); fn(); });
@@ -2687,7 +2738,11 @@ onClick('p-restart',  () => startLevel(level));
 onClick('p-levels',   () => showLevels('pause-scr'));
 onClick('retry-btn',  () => startLevel(level));
 onClick('r-levels',   () => showLevels('res-scr'));
-onClick('share-btn',  shareWin);
+onClick('share-btn',  openShare);
+onClick('sh-save',    saveShare);
+onClick('sh-send',    sendShare);
+onClick('sh-copy',    copyShare);
+onClick('sh-back',    () => show('res-scr'));
 $('mute-btn').addEventListener('click', () => { setMuted(!save.muted); SFX.play('click'); });
 $('p-sound').addEventListener('click',  () => { setMuted(!save.muted); SFX.play('click'); });
 
